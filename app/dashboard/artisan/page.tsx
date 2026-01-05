@@ -33,11 +33,17 @@ interface Booking {
   id: string;
   clientId: string;
   artisanId: string;
-  status: 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'ACCEPTED' | 'VISIT_SCHEDULED' | 'QUOTE_PENDING' | 'QUOTE_SENT' | 'QUOTE_APPROVED' | 'QUOTE_DECLINED' | 'IN_PROGRESS' | 'WORK_COMPLETED' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
+  jobTitle: string;
   jobDescription: string;
-  estimatedPrice: number | null;
-  finalPrice: number | null;
-  scheduledDate: string | null;
+  location: string | null;
+  urgency: string | null;
+  visitDate: string | null;
+  quotedPrice: number | null;
+  laborCost: number | null;
+  materialCost: number | null;
+  estimatedDays: number | null;
+  quoteNotes: string | null;
   completedDate: string | null;
   clientNotes: string | null;
   createdAt: string;
@@ -128,6 +134,31 @@ export default function ArtisanDashboard() {
       console.error('Error fetching bookings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBookingAction = async (bookingId: string, action: 'accept' | 'reject') => {
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Failed to update booking');
+        return;
+      }
+
+      // Refresh bookings list
+      fetchBookings();
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      alert('An error occurred. Please try again.');
     }
   };
 
@@ -566,10 +597,20 @@ export default function ArtisanDashboard() {
                         <div className="flex flex-row lg:flex-col gap-2 lg:items-end">
                           {booking.status === 'PENDING' && (
                             <>
-                              <Button variant="primary" size="sm" className="flex-1 lg:flex-initial">
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                className="flex-1 lg:flex-initial"
+                                onClick={() => handleBookingAction(booking.id, 'accept')}
+                              >
                                 Accept
                               </Button>
-                              <Button variant="outline" size="sm" className="flex-1 lg:flex-initial">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 lg:flex-initial"
+                                onClick={() => handleBookingAction(booking.id, 'reject')}
+                              >
                                 Decline
                               </Button>
                             </>
