@@ -29,7 +29,7 @@ This guide will walk you through setting up Google OAuth for EazyGO, from localh
 
 3. **Select Your Project**
    - Click the project dropdown again
-   - Select "EazyGO" from the list
+   - Select "EazyGO" from t\he list
 
 ### Step 2: Enable Google+ API
 
