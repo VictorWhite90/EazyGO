@@ -31,17 +31,25 @@ import { Container } from '@/components/layout/Container';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { QuoteApprovalCard } from '@/components/booking/QuoteApprovalCard';
 
 interface Booking {
   id: string;
   clientId: string;
   artisanId: string;
-  status: 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'ACCEPTED' | 'VISIT_SCHEDULED' | 'QUOTE_PENDING' | 'QUOTE_SENT' | 'QUOTE_APPROVED' | 'QUOTE_DECLINED' | 'IN_PROGRESS' | 'WORK_COMPLETED' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
+  jobTitle: string;
   jobDescription: string;
-  estimatedPrice: number | null;
-  finalPrice: number | null;
-  scheduledDate: string | null;
+  location: string | null;
+  urgency: string | null;
+  visitDate: string | null;
+  quotedPrice: number | null;
+  laborCost: number | null;
+  materialCost: number | null;
+  estimatedDays: number | null;
+  quoteNotes: string | null;
   completedDate: string | null;
+  clientNotes: string | null;
   createdAt: string;
   artisan: {
     id: string;
@@ -62,7 +70,7 @@ interface Booking {
   } | null;
 }
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, any> = {
   PENDING: {
     label: 'Pending',
     color: 'text-yellow-700',
@@ -79,6 +87,46 @@ const STATUS_CONFIG = {
     icon: CheckCircle,
     iconColor: 'text-blue-600',
   },
+  VISIT_SCHEDULED: {
+    label: 'Visit Scheduled',
+    color: 'text-cyan-700',
+    bg: 'bg-cyan-100',
+    border: 'border-cyan-300',
+    icon: Calendar,
+    iconColor: 'text-cyan-600',
+  },
+  QUOTE_PENDING: {
+    label: 'Quote Pending',
+    color: 'text-orange-700',
+    bg: 'bg-orange-100',
+    border: 'border-orange-300',
+    icon: Clock,
+    iconColor: 'text-orange-600',
+  },
+  QUOTE_SENT: {
+    label: 'Quote Received',
+    color: 'text-indigo-700',
+    bg: 'bg-indigo-100',
+    border: 'border-indigo-300',
+    icon: Bell,
+    iconColor: 'text-indigo-600',
+  },
+  QUOTE_APPROVED: {
+    label: 'Quote Approved',
+    color: 'text-teal-700',
+    bg: 'bg-teal-100',
+    border: 'border-teal-300',
+    icon: CheckCircle,
+    iconColor: 'text-teal-600',
+  },
+  QUOTE_DECLINED: {
+    label: 'Quote Declined',
+    color: 'text-red-700',
+    bg: 'bg-red-100',
+    border: 'border-red-300',
+    icon: XCircle,
+    iconColor: 'text-red-600',
+  },
   IN_PROGRESS: {
     label: 'In Progress',
     color: 'text-purple-700',
@@ -86,6 +134,14 @@ const STATUS_CONFIG = {
     border: 'border-purple-300',
     icon: Activity,
     iconColor: 'text-purple-600',
+  },
+  WORK_COMPLETED: {
+    label: 'Work Completed',
+    color: 'text-emerald-700',
+    bg: 'bg-emerald-100',
+    border: 'border-emerald-300',
+    icon: CheckCircle,
+    iconColor: 'text-emerald-600',
   },
   COMPLETED: {
     label: 'Completed',
@@ -102,6 +158,14 @@ const STATUS_CONFIG = {
     border: 'border-red-300',
     icon: XCircle,
     iconColor: 'text-red-600',
+  },
+  DISPUTED: {
+    label: 'Disputed',
+    color: 'text-gray-700',
+    bg: 'bg-gray-100',
+    border: 'border-gray-300',
+    icon: AlertCircle,
+    iconColor: 'text-gray-600',
   },
 };
 
@@ -156,9 +220,10 @@ export default function ClientDashboard() {
     completed: bookings.filter((b) => b.status === 'COMPLETED').length,
   };
 
+  const quotesToApprove = bookings.filter((b) => b.status === 'QUOTE_SENT');
   const recentBookings = bookings.slice(0, 5);
   const upcomingBookings = bookings.filter(
-    (b) => b.scheduledDate && new Date(b.scheduledDate) > new Date() && b.status !== 'CANCELLED'
+    (b) => b.visitDate && new Date(b.visitDate) > new Date() && b.status !== 'CANCELLED'
   ).slice(0, 3);
 
   const filteredBookings = bookings.filter((booking) =>
@@ -297,6 +362,52 @@ export default function ClientDashboard() {
             </Card>
           </motion.div>
         </div>
+
+        {/* Quotes to Approve Section */}
+        {quotesToApprove.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mb-8"
+          >
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Bell size={24} className="text-indigo-600" />
+                <h2 className="text-2xl font-bold text-neutral-900">
+                  Quotes Awaiting Your Approval
+                </h2>
+                <Badge variant="primary" size="md" className="bg-indigo-600">
+                  {quotesToApprove.length}
+                </Badge>
+              </div>
+              <p className="text-neutral-600">Review and approve quotes from artisans</p>
+            </div>
+            <div className="space-y-6">
+              {quotesToApprove.map((booking, index) => (
+                <motion.div
+                  key={booking.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <QuoteApprovalCard
+                    bookingId={booking.id}
+                    artisanName={booking.artisan.user.name}
+                    jobTitle={booking.jobTitle}
+                    quotedPrice={Number(booking.quotedPrice)}
+                    laborCost={booking.laborCost ? Number(booking.laborCost) : null}
+                    materialCost={booking.materialCost ? Number(booking.materialCost) : null}
+                    estimatedDays={booking.estimatedDays}
+                    quoteNotes={booking.quoteNotes}
+                    onApprove={fetchBookings}
+                    onDecline={fetchBookings}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-8 mb-8">
           {/* Main Content */}
@@ -454,9 +565,9 @@ export default function ClientDashboard() {
                                     <Calendar size={14} />
                                     <span>{new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                   </div>
-                                  {booking.estimatedPrice && (
+                                  {booking.quotedPrice && (
                                     <div className="font-semibold text-green-600 text-sm">
-                                      ₦{booking.estimatedPrice.toLocaleString()}
+                                      ₦{Number(booking.quotedPrice).toLocaleString()}
                                     </div>
                                   )}
                                 </div>
@@ -500,7 +611,7 @@ export default function ClientDashboard() {
                             {booking.artisan.user.name}
                           </p>
                           <p className="text-xs text-neutral-600">
-                            {booking.scheduledDate && new Date(booking.scheduledDate).toLocaleDateString('en-US', {
+                            {booking.visitDate && new Date(booking.visitDate).toLocaleDateString('en-US', {
                               month: 'long',
                               day: 'numeric'
                             })}
@@ -674,18 +785,18 @@ export default function ClientDashboard() {
                                         year: 'numeric'
                                       })}</span>
                                     </div>
-                                    {booking.scheduledDate && (
+                                    {booking.visitDate && (
                                       <div className="flex items-center gap-2 text-primary-600 font-medium">
                                         <Clock size={16} />
-                                        <span>{new Date(booking.scheduledDate).toLocaleDateString('en-US', {
+                                        <span>{new Date(booking.visitDate).toLocaleDateString('en-US', {
                                           month: 'short',
                                           day: 'numeric'
                                         })}</span>
                                       </div>
                                     )}
-                                    {booking.estimatedPrice && (
+                                    {booking.quotedPrice && (
                                       <div className="font-semibold text-green-600 text-base flex items-center gap-1">
-                                        ₦{booking.estimatedPrice.toLocaleString()}
+                                        ₦{Number(booking.quotedPrice).toLocaleString()}
                                       </div>
                                     )}
                                   </div>
