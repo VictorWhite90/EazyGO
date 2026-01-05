@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { BackToHome } from '@/components/ui/BackToHome';
 
 export default function ClientRegisterPage() {
   const router = useRouter();
@@ -93,7 +94,7 @@ export default function ClientRegisterPage() {
         transition={{ duration: 0.6 }}
         className="w-full max-w-md"
       >
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <Link
             href="/auth/register"
             className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -101,6 +102,7 @@ export default function ClientRegisterPage() {
             <ArrowLeft size={20} />
             Back
           </Link>
+          <BackToHome variant="ghost" />
         </div>
 
         <div className="text-center mb-8">

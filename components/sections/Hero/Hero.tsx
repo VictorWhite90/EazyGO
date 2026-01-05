@@ -16,7 +16,7 @@ import { FadeIn, SlideIn } from '@/components/animations';
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center bg-gradient-to-br from-neutral-50 via-white to-primary-50/30 overflow-hidden">
+    <section className="relative min-h-screen flex items-center bg-gradient-to-br from-neutral-50 via-white to-primary-50/30 overflow-hidden pb-12">
       {/* Animated grid pattern background */}
       <div className="absolute inset-0 opacity-[0.02]">
         <div className="absolute inset-0" style={{
@@ -47,7 +47,7 @@ export default function Hero() {
 
             <FadeIn delay={0.3}>
               <p className="text-xl sm:text-2xl text-neutral-600 mb-8 leading-relaxed">
-                From plumbers to electricians, find verified professionals in your area. Book in seconds, get help in hours.
+                From plumbers to electricians, find verified professionals in your area. Book in seconds and get help.
               </p>
             </FadeIn>
 
@@ -60,8 +60,6 @@ export default function Hero() {
                     size="lg"
                     icon={<ArrowRight size={20} />}
                     iconPosition="right"
-                    magneticEffect
-                    hoverScale={1.05}
                   >
                     Find an artisan
                   </Button>
@@ -72,7 +70,6 @@ export default function Hero() {
                     variant="glass"
                     size="lg"
                     icon={<Briefcase size={20} />}
-                    magneticEffect
                   >
                     Become an artisan
                   </Button>
@@ -110,7 +107,7 @@ export default function Hero() {
 
           {/* Right: Interactive visual */}
           <SlideIn direction="right" delay={0.3}>
-            <div className="relative">
+            <div className="relative hidden lg:block">
               {/* Main glass card */}
               <GlassCard
                 blur="lg"

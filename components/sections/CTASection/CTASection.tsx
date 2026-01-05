@@ -6,6 +6,7 @@
  */
 
 import { ArrowRight, Briefcase } from 'lucide-react';
+import Link from 'next/link';
 import { Container } from '@/components/layout/Container';
 import { Button } from '@/components/ui/Button';
 import { GlassCard } from '@/components/ui/Card';
@@ -44,24 +45,26 @@ export default function CTASection() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    icon={<ArrowRight size={20} />}
-                    iconPosition="right"
-                    magneticEffect
-                    hoverScale={1.05}
-                  >
-                    Find a professional
-                  </Button>
+                  <Link href="/auth/register/client">
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      icon={<ArrowRight size={20} />}
+                      iconPosition="right"
+                    >
+                      Find a professional
+                    </Button>
+                  </Link>
 
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    icon={<Briefcase size={20} />}
-                  >
-                    Join as an artisan
-                  </Button>
+                  <Link href="/auth/register/artisan">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      icon={<Briefcase size={20} />}
+                    >
+                      Join as an artisan
+                    </Button>
+                  </Link>
                 </div>
               </div>
 

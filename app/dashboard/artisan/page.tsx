@@ -1,411 +1,603 @@
 'use client';
 
-/**
- * Artisan Dashboard
- * Main dashboard for artisans to manage profile, bookings, and earnings
- */
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
+import Image from 'next/image';
 import {
-  Briefcase,
   Calendar,
+  Clock,
+  CheckCircle,
+  XCircle,
   DollarSign,
   Star,
+  User,
+  Settings,
+  TrendingUp,
+  Briefcase,
+  Home,
   MapPin,
   Phone,
   Mail,
-  Edit,
-  TrendingUp,
-  Users,
-  Clock,
-  CheckCircle,
+  Award,
+  AlertCircle,
 } from 'lucide-react';
 import { Container } from '@/components/layout/Container';
-import { Card, GlassCard } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { FadeIn } from '@/components/animations';
-import Image from 'next/image';
 
-// Mock data - will be replaced with real data from API
-const mockArtisan = {
-  name: 'John Doe',
-  email: 'john.doe@example.com',
-  phone: '+234 800 123 4567',
-  bio: 'Professional plumber with 10+ years of experience. Specializing in residential and commercial plumbing repairs, installations, and maintenance.',
-  skills: ['Plumbing', 'Electrical', 'HVAC'],
-  yearsExp: 10,
-  hourlyRate: 5000,
-  city: 'Lagos',
-  state: 'Lagos State',
-  serviceRadius: 20,
-  rating: 4.8,
-  reviewsCount: 127,
-  jobsCompleted: 342,
-  profilePhoto: null,
-  verified: true,
-  availability: 'Available',
+interface Booking {
+  id: string;
+  clientId: string;
+  artisanId: string;
+  status: 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  jobDescription: string;
+  estimatedPrice: number | null;
+  finalPrice: number | null;
+  scheduledDate: string | null;
+  completedDate: string | null;
+  clientNotes: string | null;
+  createdAt: string;
+  client: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  };
+  review: {
+    id: string;
+    rating: number;
+    comment: string;
+  } | null;
+}
+
+interface ArtisanProfile {
+  id: string;
+  userId: string;
+  phone: string;
+  bio: string;
+  skills: string[];
+  yearsExp: number;
+  rating: number;
+  totalJobs: number;
+  verified: boolean;
+  profilePhoto: string | null;
+  city: string;
+  state: string;
+  user: {
+    name: string;
+    email: string;
+  };
+}
+
+const STATUS_COLORS = {
+  PENDING: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+  ACCEPTED: 'bg-blue-100 text-blue-700 border-blue-300',
+  IN_PROGRESS: 'bg-purple-100 text-purple-700 border-purple-300',
+  COMPLETED: 'bg-green-100 text-green-700 border-green-300',
+  CANCELLED: 'bg-red-100 text-red-700 border-red-300',
 };
 
-const stats = [
-  {
-    label: 'Jobs Completed',
-    value: '342',
-    change: '+12%',
-    icon: CheckCircle,
-    color: 'text-success-600',
-    bgColor: 'bg-success-100',
-  },
-  {
-    label: 'Avg. Rating',
-    value: '4.8',
-    change: '+0.3',
-    icon: Star,
-    color: 'text-secondary-600',
-    bgColor: 'bg-secondary-100',
-  },
-  {
-    label: 'This Month',
-    value: '₦285K',
-    change: '+18%',
-    icon: TrendingUp,
-    color: 'text-primary-600',
-    bgColor: 'bg-primary-100',
-  },
-  {
-    label: 'Active Clients',
-    value: '23',
-    change: '+5',
-    icon: Users,
-    color: 'text-primary-600',
-    bgColor: 'bg-primary-100',
-  },
-];
-
-const recentBookings = [
-  {
-    id: 1,
-    client: 'Sarah Johnson',
-    service: 'Plumbing Repair',
-    date: '2024-01-15',
-    time: '2:00 PM',
-    status: 'Confirmed',
-    location: 'Victoria Island, Lagos',
-  },
-  {
-    id: 2,
-    client: 'Michael Chen',
-    service: 'Electrical Installation',
-    date: '2024-01-16',
-    time: '10:00 AM',
-    status: 'Pending',
-    location: 'Lekki, Lagos',
-  },
-  {
-    id: 3,
-    client: 'Emma Williams',
-    service: 'HVAC Maintenance',
-    date: '2024-01-17',
-    time: '3:30 PM',
-    status: 'Confirmed',
-    location: 'Ikoyi, Lagos',
-  },
-];
+const STATUS_ICONS = {
+  PENDING: Clock,
+  ACCEPTED: CheckCircle,
+  IN_PROGRESS: Clock,
+  COMPLETED: CheckCircle,
+  CANCELLED: XCircle,
+};
 
 export default function ArtisanDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'profile'>('overview');
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [profile, setProfile] = useState<ArtisanProfile | null>(null);
+  const [stats, setStats] = useState({ totalEarnings: 0, totalJobs: 0 });
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+    } else if (status === 'authenticated') {
+      fetchBookings();
+    }
+  }, [status, statusFilter]);
+
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+
+      const response = await fetch(`/api/bookings/artisan?${params.toString()}`);
+      const data = await response.json();
+
+      if (data.error) {
+        console.error('Error:', data.error);
+        return;
+      }
+
+      setBookings(data.bookings || []);
+      setProfile(data.profile);
+      setStats(data.stats);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-neutral-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <Card variant="default" padding="lg" className="text-center max-w-md">
+          <h2 className="text-2xl font-bold text-neutral-900 mb-2">
+            Artisan Profile Not Found
+          </h2>
+          <p className="text-neutral-600 mb-6">
+            You don't have an artisan profile. Please register as an artisan to access this dashboard.
+          </p>
+          <Link href="/auth/register/artisan">
+            <Button variant="primary" size="md">
+              Register as Artisan
+            </Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
+  const bookingStats = {
+    total: bookings.length,
+    pending: bookings.filter((b) => b.status === 'PENDING').length,
+    inProgress: bookings.filter((b) => b.status === 'IN_PROGRESS').length,
+    completed: bookings.filter((b) => b.status === 'COMPLETED').length,
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-primary-50/30 py-8">
-      <Container>
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-900 mb-2">
-              Welcome back, {mockArtisan.name}!
-            </h1>
-            <p className="text-neutral-600">
-              Here's what's happening with your account today
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge variant={mockArtisan.availability === 'Available' ? 'success' : 'neutral'} size="md">
-              <div className="w-2 h-2 rounded-full bg-current mr-2" />
-              {mockArtisan.availability}
-            </Badge>
-            <Button variant="primary" size="md" icon={<Edit size={18} />}>
-              Edit Profile
-            </Button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8 border-b border-neutral-200">
-          {[
-            { id: 'overview', label: 'Overview' },
-            { id: 'bookings', label: 'Bookings' },
-            { id: 'profile', label: 'Profile' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 font-medium transition-all relative ${
-                activeTab === tab.id
-                  ? 'text-primary-600'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div className="space-y-8">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.map((stat, index) => (
-                <FadeIn key={stat.label} delay={index * 0.1}>
-                  <Card variant="default" padding="lg" hover hoverScale={1.02}>
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}>
-                        <stat.icon size={24} className={stat.color} />
-                      </div>
-                      <Badge variant="glass" size="sm" className="text-xs">
-                        {stat.change}
-                      </Badge>
-                    </div>
-                    <div className="text-3xl font-bold text-neutral-900 mb-1">
-                      {stat.value}
-                    </div>
-                    <div className="text-sm text-neutral-600">{stat.label}</div>
-                  </Card>
-                </FadeIn>
-              ))}
-            </div>
-
-            {/* Recent Bookings */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-neutral-900">Upcoming Bookings</h2>
-                <Button variant="ghost" size="sm">
-                  View all
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-primary-50/20">
+      {/* Top Navigation Bar */}
+      <div className="bg-white border-b border-neutral-200 sticky top-0 z-50 shadow-sm">
+        <Container>
+          <div className="flex items-center justify-between py-4">
+            <Link href="/">
+              <Image
+                src="/EAZYGO LOGO.png"
+                alt="EazyGO"
+                width={180}
+                height={72}
+                className="h-14 md:h-16 w-auto"
+              />
+            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/">
+                <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors" title="Back to Home">
+                  <Home size={20} className="text-neutral-600" />
+                </button>
+              </Link>
+              <Link href={`/artisan/${profile.id}`}>
+                <Button variant="ghost" size="sm" icon={<User size={16} />}>
+                  Public Profile
                 </Button>
+              </Link>
+              <Link href="/dashboard/artisan/settings">
+                <Button variant="ghost" size="sm" icon={<Settings size={16} />}>
+                  Settings
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Container>
+      </div>
+
+      <Container className="py-8">
+        {/* Profile Hero Section */}
+        <div className="mb-8">
+          <Card variant="glass" padding="lg" className="overflow-hidden">
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              {/* Profile Picture */}
+              <div className="relative flex-shrink-0">
+                {profile.profilePhoto ? (
+                  <div className="relative w-32 h-32 rounded-2xl overflow-hidden ring-4 ring-primary-100 shadow-lg">
+                    <Image
+                      src={profile.profilePhoto}
+                      alt={profile.user.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center ring-4 ring-primary-100 shadow-lg">
+                    <User size={48} className="text-white" />
+                  </div>
+                )}
+                {profile.verified && (
+                  <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white p-2 rounded-full shadow-lg">
+                    <Award size={20} />
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-4">
-                {recentBookings.map((booking, index) => (
-                  <FadeIn key={booking.id} delay={index * 0.1}>
-                    <Card variant="default" padding="lg" hover>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-                            <Briefcase size={20} className="text-primary-600" />
+              {/* Profile Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div>
+                    <h1 className="text-3xl font-bold text-neutral-900 mb-1">
+                      {profile.user.name}
+                    </h1>
+                    <div className="flex items-center gap-4 text-sm text-neutral-600 mb-2">
+                      <div className="flex items-center gap-1">
+                        <Mail size={14} />
+                        {profile.user.email}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Phone size={14} />
+                        {profile.phone}
+                      </div>
+                      {profile.city && (
+                        <div className="flex items-center gap-1">
+                          <MapPin size={14} />
+                          {profile.city}{profile.state && `, ${profile.state}`}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-1 bg-yellow-100 px-3 py-1 rounded-full">
+                        <Star size={16} className="text-yellow-600 fill-yellow-600" />
+                        <span className="font-semibold text-yellow-900">{profile.rating.toFixed(1)}</span>
+                      </div>
+                      <div className="text-sm text-neutral-600">
+                        {profile.totalJobs} {profile.totalJobs === 1 ? 'job' : 'jobs'} completed
+                      </div>
+                      {profile.yearsExp > 0 && (
+                        <div className="text-sm text-neutral-600">
+                          {profile.yearsExp} {profile.yearsExp === 1 ? 'year' : 'years'} experience
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bio */}
+                {profile.bio && (
+                  <p className="text-neutral-700 mb-4 leading-relaxed">
+                    {profile.bio}
+                  </p>
+                )}
+
+                {/* Skills */}
+                {profile.skills && profile.skills.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-neutral-600 mb-2">Skills & Expertise</p>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.skills.map((skill) => (
+                        <Badge key={skill} variant="primary" size="md">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Verification Alert */}
+        {!profile.verified && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <Card variant="default" padding="md" className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="text-yellow-600" size={24} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-neutral-900 mb-1 text-lg">
+                    Get Verified & Stand Out
+                  </h3>
+                  <p className="text-sm text-neutral-700 mb-3">
+                    Verified artisans receive 3x more booking requests. Complete your verification to build trust with clients.
+                  </p>
+                  <Button variant="primary" size="sm">
+                    Start Verification Process
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-neutral-600 mb-1">Total Earnings</p>
+                  <p className="text-3xl font-bold text-green-600">
+                    ₦{stats.totalEarnings.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-1">All time</p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <DollarSign className="text-white" size={28} />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-neutral-600 mb-1">Pending Requests</p>
+                  <p className="text-3xl font-bold text-yellow-600">{bookingStats.pending}</p>
+                  <p className="text-xs text-neutral-500 mt-1">Awaiting response</p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <AlertCircle className="text-white" size={28} />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-neutral-600 mb-1">In Progress</p>
+                  <p className="text-3xl font-bold text-purple-600">{bookingStats.inProgress}</p>
+                  <p className="text-xs text-neutral-500 mt-1">Active jobs</p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Clock className="text-white" size={28} />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-neutral-600 mb-1">Completed</p>
+                  <p className="text-3xl font-bold text-primary-600">{profile.totalJobs}</p>
+                  <p className="text-xs text-neutral-500 mt-1">Lifetime jobs</p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Briefcase className="text-white" size={28} />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Bookings Section */}
+        <Card variant="default" padding="lg">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-neutral-900">Booking Requests</h2>
+              <p className="text-sm text-neutral-600 mt-1">Manage your client bookings</p>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { value: 'all', label: 'All' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'accepted', label: 'Accepted' },
+                { value: 'in_progress', label: 'In Progress' },
+                { value: 'completed', label: 'Completed' },
+              ].map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setStatusFilter(filter.value)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    statusFilter === filter.value
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {bookings.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Calendar size={48} className="text-neutral-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-neutral-900 mb-2">
+                No booking requests yet
+              </h3>
+              <p className="text-neutral-600 mb-6 max-w-md mx-auto">
+                Your bookings will appear here when clients request your services. Make sure your profile is complete to attract more clients.
+              </p>
+              <Link href={`/artisan/${profile.id}`}>
+                <Button variant="primary" size="md">View Your Public Profile</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {bookings.map((booking, index) => {
+                const StatusIcon = STATUS_ICONS[booking.status];
+                return (
+                  <motion.div
+                    key={booking.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card
+                      variant="default"
+                      padding="md"
+                      className="hover:shadow-md transition-all border-l-4"
+                      style={{
+                        borderLeftColor: booking.status === 'PENDING' ? '#eab308' :
+                                        booking.status === 'ACCEPTED' ? '#3b82f6' :
+                                        booking.status === 'IN_PROGRESS' ? '#a855f7' :
+                                        booking.status === 'COMPLETED' ? '#22c55e' : '#ef4444'
+                      }}
+                    >
+                      <div className="flex flex-col lg:flex-row gap-4">
+                        {/* Client Info */}
+                        <div className="flex items-start gap-4 flex-1">
+                          {/* Avatar */}
+                          <div className="relative w-14 h-14 flex-shrink-0">
+                            {booking.client.image ? (
+                              <Image
+                                src={booking.client.image}
+                                alt={booking.client.name}
+                                fill
+                                className="rounded-xl object-cover border-2 border-neutral-200"
+                              />
+                            ) : (
+                              <div className="w-full h-full rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-300 flex items-center justify-center">
+                                <User size={24} className="text-neutral-600" />
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-neutral-900 mb-1">
-                              {booking.service}
-                            </h3>
-                            <div className="flex flex-wrap items-center gap-3 text-sm text-neutral-600">
-                              <span className="flex items-center gap-1">
-                                <Users size={14} />
-                                {booking.client}
-                              </span>
-                              <span className="flex items-center gap-1">
+
+                          {/* Details */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div>
+                                <h3 className="text-lg font-semibold text-neutral-900">
+                                  {booking.client.name}
+                                </h3>
+                                <p className="text-sm text-neutral-600">{booking.client.email}</p>
+                              </div>
+
+                              {/* Status Badge */}
+                              <div
+                                className={`px-3 py-1 rounded-full text-xs font-semibold border-2 flex items-center gap-1 ${STATUS_COLORS[booking.status]}`}
+                              >
+                                <StatusIcon size={14} />
+                                {booking.status.replace('_', ' ')}
+                              </div>
+                            </div>
+
+                            {/* Job Description */}
+                            <p className="text-neutral-800 font-medium mb-3">
+                              {booking.jobDescription}
+                            </p>
+
+                            {/* Client Notes */}
+                            {booking.clientNotes && (
+                              <div className="bg-neutral-50 border border-neutral-200 p-3 rounded-lg mb-3">
+                                <p className="text-xs font-semibold text-neutral-600 mb-1">
+                                  Client Notes:
+                                </p>
+                                <p className="text-sm text-neutral-700">{booking.clientNotes}</p>
+                              </div>
+                            )}
+
+                            {/* Meta Info */}
+                            <div className="flex flex-wrap gap-4 text-sm text-neutral-600">
+                              <div className="flex items-center gap-1">
                                 <Calendar size={14} />
-                                {booking.date}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock size={14} />
-                                {booking.time}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MapPin size={14} />
-                                {booking.location}
-                              </span>
+                                <span>
+                                  {new Date(booking.createdAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}
+                                </span>
+                              </div>
+                              {booking.scheduledDate && (
+                                <div className="flex items-center gap-1 text-primary-600 font-medium">
+                                  <Clock size={14} />
+                                  <span>
+                                    Scheduled: {new Date(booking.scheduledDate).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                              )}
+                              {booking.estimatedPrice && (
+                                <div className="flex items-center gap-1 font-semibold text-green-600">
+                                  <DollarSign size={14} />
+                                  ₦{booking.estimatedPrice.toLocaleString()}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Badge
-                            variant={booking.status === 'Confirmed' ? 'success' : 'neutral'}
-                            size="sm"
-                          >
-                            {booking.status}
-                          </Badge>
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
+
+                        {/* Actions */}
+                        <div className="flex flex-row lg:flex-col gap-2 lg:items-end">
+                          {booking.status === 'PENDING' && (
+                            <>
+                              <Button variant="primary" size="sm" className="flex-1 lg:flex-initial">
+                                Accept
+                              </Button>
+                              <Button variant="outline" size="sm" className="flex-1 lg:flex-initial">
+                                Decline
+                              </Button>
+                            </>
+                          )}
+                          {booking.status === 'ACCEPTED' && (
+                            <Button variant="primary" size="sm">
+                              Start Job
+                            </Button>
+                          )}
+                          {booking.status === 'IN_PROGRESS' && (
+                            <Button variant="primary" size="sm">
+                              Mark Complete
+                            </Button>
+                          )}
+                          <Link href={`/dashboard/artisan/bookings/${booking.id}`}>
+                            <Button variant="ghost" size="sm">
+                              View Details
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     </Card>
-                  </FadeIn>
-                ))}
-              </div>
+                  </motion.div>
+                );
+              })}
             </div>
-          </div>
-        )}
-
-        {/* Bookings Tab */}
-        {activeTab === 'bookings' && (
-          <div>
-            <GlassCard padding="lg" className="text-center py-12">
-              <Calendar size={48} className="text-neutral-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-neutral-900 mb-2">
-                Booking Management
-              </h3>
-              <p className="text-neutral-600 mb-6">
-                View and manage all your bookings, inquiries, and appointments
-              </p>
-              <Button variant="primary" size="md">
-                View All Bookings
-              </Button>
-            </GlassCard>
-          </div>
-        )}
-
-        {/* Profile Tab */}
-        {activeTab === 'profile' && (
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Profile Info Card */}
-            <div className="lg:col-span-1">
-              <Card variant="default" padding="lg">
-                <div className="text-center">
-                  {/* Profile Photo */}
-                  <div className="relative w-32 h-32 mx-auto mb-4">
-                    {mockArtisan.profilePhoto ? (
-                      <Image
-                        src={mockArtisan.profilePhoto}
-                        alt={mockArtisan.name}
-                        fill
-                        className="rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-full bg-primary-100 flex items-center justify-center">
-                        <span className="text-4xl font-bold text-primary-600">
-                          {mockArtisan.name.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-                    {mockArtisan.verified && (
-                      <div className="absolute bottom-0 right-0 w-10 h-10 bg-success-500 rounded-full border-4 border-white flex items-center justify-center">
-                        <CheckCircle size={20} className="text-white" />
-                      </div>
-                    )}
-                  </div>
-
-                  <h2 className="text-2xl font-bold text-neutral-900 mb-1">
-                    {mockArtisan.name}
-                  </h2>
-
-                  <div className="flex items-center justify-center gap-2 mb-4">
-                    <Star size={18} className="text-secondary-500 fill-secondary-500" />
-                    <span className="font-semibold text-neutral-900">{mockArtisan.rating}</span>
-                    <span className="text-neutral-600">({mockArtisan.reviewsCount} reviews)</span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 justify-center mb-6">
-                    {mockArtisan.skills.map((skill) => (
-                      <Badge key={skill} variant="primary" size="sm">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <Button variant="primary" size="md" fullWidth icon={<Edit size={18} />}>
-                    Edit Profile
-                  </Button>
-                </div>
-              </Card>
-            </div>
-
-            {/* Details Card */}
-            <div className="lg:col-span-2">
-              <Card variant="default" padding="lg">
-                <h3 className="text-xl font-semibold text-neutral-900 mb-6">
-                  Profile Details
-                </h3>
-
-                <div className="space-y-6">
-                  {/* Bio */}
-                  <div>
-                    <label className="text-sm font-medium text-neutral-700 mb-2 block">
-                      About
-                    </label>
-                    <p className="text-neutral-600 leading-relaxed">{mockArtisan.bio}</p>
-                  </div>
-
-                  {/* Contact Info */}
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-neutral-700 mb-2 flex items-center gap-2">
-                        <Mail size={16} />
-                        Email
-                      </label>
-                      <p className="text-neutral-900">{mockArtisan.email}</p>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-neutral-700 mb-2 flex items-center gap-2">
-                        <Phone size={16} />
-                        Phone
-                      </label>
-                      <p className="text-neutral-900">{mockArtisan.phone}</p>
-                    </div>
-                  </div>
-
-                  {/* Location */}
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-neutral-700 mb-2 flex items-center gap-2">
-                        <MapPin size={16} />
-                        Location
-                      </label>
-                      <p className="text-neutral-900">
-                        {mockArtisan.city}, {mockArtisan.state}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-neutral-700 mb-2 block">
-                        Service Radius
-                      </label>
-                      <p className="text-neutral-900">{mockArtisan.serviceRadius}km</p>
-                    </div>
-                  </div>
-
-                  {/* Professional Info */}
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-neutral-700 mb-2 flex items-center gap-2">
-                        <Briefcase size={16} />
-                        Experience
-                      </label>
-                      <p className="text-neutral-900">{mockArtisan.yearsExp} years</p>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-neutral-700 mb-2 flex items-center gap-2">
-                        <DollarSign size={16} />
-                        Hourly Rate
-                      </label>
-                      <p className="text-neutral-900">₦{mockArtisan.hourlyRate.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
-        )}
+          )}
+        </Card>
       </Container>
     </div>
   );

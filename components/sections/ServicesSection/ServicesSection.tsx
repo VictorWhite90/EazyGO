@@ -41,7 +41,7 @@ const services = [
 
 export default function ServicesSection() {
   return (
-    <section className="py-24 bg-white">
+    <section className="py-12 bg-white">
       <Container>
         <SectionHeader
           badge="Our Services"
@@ -88,10 +88,12 @@ export default function ServicesSection() {
         {/* View All Services CTA */}
         <FadeIn delay={0.5}>
           <div className="text-center mt-12">
-            <button className="group inline-flex items-center gap-2 px-8 py-4 bg-neutral-900 hover:bg-neutral-800 text-white font-semibold rounded-full transition-all hover:shadow-lg">
-              <span>View all services</span>
-              <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
-            </button>
+            <a href="/auth/register">
+              <button className="group inline-flex items-center gap-2 px-8 py-4 bg-neutral-900 hover:bg-neutral-800 text-white font-semibold rounded-full transition-all hover:shadow-lg">
+                <span>View all services</span>
+                <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
+              </button>
+            </a>
           </div>
         </FadeIn>
       </Container>

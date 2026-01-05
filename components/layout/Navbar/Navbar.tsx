@@ -47,10 +47,10 @@ export default function Navbar() {
               <Image
                 src="/EAZYGO LOGO.png"
                 alt="EazyGO Logo"
-                width={200}
-                height={200}
+                width={400}
+                height={400}
                 draggable={false}
-                className="h-12 sm:h-14 lg:h-16 w-auto select-none"
+                className="h-20 sm:h-24 lg:h-32 w-auto select-none"
                 priority
                 onContextMenu={(e) => e.preventDefault()}
               />

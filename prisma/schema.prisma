@@ -13,6 +13,14 @@ enum UserRole {
   ADMIN
 }
 
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -27,6 +35,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   artisanProfile ArtisanProfile?
+  clientBookings Booking[] @relation("ClientBookings")
 
   @@map("users")
 }
@@ -91,6 +100,43 @@ model ArtisanProfile {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings Booking[] @relation("ArtisanBookings")
 
   @@map("artisan_profiles")
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  clientId        String        @map("client_id")
+  artisanId       String        @map("artisan_id")
+  status          BookingStatus @default(PENDING)
+  jobDescription  String        @db.Text @map("job_description")
+  estimatedPrice  Float?        @map("estimated_price")
+  finalPrice      Float?        @map("final_price")
+  scheduledDate   DateTime?     @map("scheduled_date")
+  completedDate   DateTime?     @map("completed_date")
+  clientNotes     String?       @db.Text @map("client_notes")
+  artisanNotes    String?       @db.Text @map("artisan_notes")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  client   User            @relation("ClientBookings", fields: [clientId], references: [id], onDelete: Cascade)
+  artisan  ArtisanProfile  @relation("ArtisanBookings", fields: [artisanId], references: [id], onDelete: Cascade)
+  review   Review?
+
+  @@map("bookings")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String   @unique @map("booking_id")
+  rating    Int
+  comment   String?  @db.Text
+  photos    String[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
 }

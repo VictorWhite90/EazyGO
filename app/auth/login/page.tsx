@@ -5,11 +5,12 @@ import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { BackToHome } from '@/components/ui/BackToHome';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const callbackUrl = searchParams.get('callbackUrl');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,7 +33,20 @@ function LoginForm() {
         setError('Invalid email or password');
         setIsLoading(false);
       } else {
-        router.push(callbackUrl);
+        // Fetch session to get user role
+        const response = await fetch('/api/auth/session');
+        const session = await response.json();
+
+        // Redirect based on role or callback URL
+        if (callbackUrl) {
+          router.push(callbackUrl);
+        } else if (session?.user?.role === 'ARTISAN') {
+          router.push('/dashboard/artisan');
+        } else if (session?.user?.role === 'CUSTOMER') {
+          router.push('/dashboard/client');
+        } else {
+          router.push('/');
+        }
         router.refresh();
       }
     } catch (error) {
@@ -42,7 +56,7 @@ function LoginForm() {
   };
 
   const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl });
+    signIn('google', { callbackUrl: callbackUrl || '/' });
   };
 
   return (
@@ -53,6 +67,10 @@ function LoginForm() {
         transition={{ duration: 0.6 }}
         className="w-full max-w-md"
       >
+        <div className="mb-6">
+          <BackToHome variant="outline" />
+        </div>
+
         <div className="text-center mb-8">
           <Link href="/">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">EazyGO</h1>
