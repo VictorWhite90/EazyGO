@@ -130,7 +130,7 @@ export default function ArtisanDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant={mockArtisan.availability === 'Available' ? 'success' : 'default'} size="md">
+            <Badge variant={mockArtisan.availability === 'Available' ? 'success' : 'neutral'} size="md">
               <div className="w-2 h-2 rounded-full bg-current mr-2" />
               {mockArtisan.availability}
             </Badge>
@@ -237,7 +237,7 @@ export default function ArtisanDashboard() {
                         </div>
                         <div className="flex items-center gap-3">
                           <Badge
-                            variant={booking.status === 'Confirmed' ? 'success' : 'default'}
+                            variant={booking.status === 'Confirmed' ? 'success' : 'neutral'}
                             size="sm"
                           >
                             {booking.status}
