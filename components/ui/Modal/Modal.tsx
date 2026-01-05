@@ -11,7 +11,7 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { modalBackdrop, modalContent } from '@/lib/animations/variants';
 
-export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
+export interface ModalProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'> {
   /**
    * Whether the modal is open
    */

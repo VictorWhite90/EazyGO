@@ -39,3 +39,6 @@ export default auth((req) => {
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 }
+
+// Use Node.js runtime instead of Edge runtime for bcryptjs compatibility
+export const runtime = 'nodejs'

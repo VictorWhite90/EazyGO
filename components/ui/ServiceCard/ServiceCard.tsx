@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
 
-export interface ServiceCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
+export interface ServiceCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title' | 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'> {
   /**
    * Service image
    */

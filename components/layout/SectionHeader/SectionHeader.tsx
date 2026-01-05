@@ -5,7 +5,7 @@
  * Consistent section header with title and subtitle
  */
 
-import { forwardRef, HTMLAttributes } from 'react';
+import { HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { FadeIn } from '@/components/animations';
 
@@ -32,29 +32,24 @@ export interface SectionHeaderProps extends HTMLAttributes<HTMLDivElement> {
   badge?: string;
 }
 
-const SectionHeader = forwardRef<HTMLDivElement, SectionHeaderProps>(
-  (
-    {
-      title,
-      subtitle,
-      align = 'center',
-      badge,
-      className,
-      ...props
-    },
-    ref
-  ) => {
-    const alignStyles = {
-      left: 'text-left',
-      center: 'text-center',
-    };
+export default function SectionHeader({
+  title,
+  subtitle,
+  align = 'center',
+  badge,
+  className,
+  ...props
+}: SectionHeaderProps) {
+  const alignStyles = {
+    left: 'text-left',
+    center: 'text-center',
+  };
 
-    return (
-      <FadeIn
-        ref={ref}
-        className={cn('mb-12', alignStyles[align], className)}
-        {...props}
-      >
+  return (
+    <FadeIn
+      className={cn('mb-12', alignStyles[align], className)}
+      {...props}
+    >
         {badge && (
           <span className="inline-block px-4 py-1.5 mb-4 text-sm font-medium text-primary-600 bg-primary-50 rounded-full border border-primary-100">
             {badge}
@@ -73,8 +68,3 @@ const SectionHeader = forwardRef<HTMLDivElement, SectionHeaderProps>(
       </FadeIn>
     );
   }
-);
-
-SectionHeader.displayName = 'SectionHeader';
-
-export default SectionHeader;
