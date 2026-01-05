@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       bookings,
       stats: {
-        totalEarnings: stats._sum.finalPrice || 0,
+        totalEarnings: stats._sum.quotedPrice || 0,
         totalJobs: stats._count,
       },
       profile: artisanProfile,
