@@ -20,6 +20,7 @@ import { Container } from '@/components/layout/Container';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { BookingRequestForm } from '@/components/booking/BookingRequestForm';
 
 interface Review {
   id: string;
@@ -392,31 +393,17 @@ export default function ArtisanProfilePage() {
         </div>
       </Container>
 
-      {/* Booking Modal - Placeholder */}
+      {/* Booking Modal */}
       {showBookingModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl p-6 max-w-md w-full"
-          >
-            <h2 className="text-2xl font-bold text-neutral-900 mb-4">
-              Book {artisan.user.name}
-            </h2>
-            <p className="text-neutral-600 mb-6">
-              The booking system will be implemented in the next phase. This will include
-              job details, scheduling, and payment processing.
-            </p>
-            <Button
-              onClick={() => setShowBookingModal(false)}
-              variant="primary"
-              size="md"
-              fullWidth
-            >
-              Close
-            </Button>
-          </motion.div>
-        </div>
+        <BookingRequestForm
+          artisanId={artisan.id}
+          artisanName={artisan.user.name}
+          onClose={() => setShowBookingModal(false)}
+          onSuccess={() => {
+            // Optionally refresh data or show a success message
+            fetchArtisan();
+          }}
+        />
       )}
     </div>
   );

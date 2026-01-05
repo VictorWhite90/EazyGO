@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     const stats = await prisma.booking.aggregate({
       where: { artisanId: artisanProfile.id, status: 'COMPLETED' },
       _sum: {
-        finalPrice: true,
+        quotedPrice: true,
       },
       _count: true,
     });

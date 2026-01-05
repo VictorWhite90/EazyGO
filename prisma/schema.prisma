@@ -14,11 +14,18 @@ enum UserRole {
 }
 
 enum BookingStatus {
-  PENDING
-  ACCEPTED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
+  PENDING              // Client created, waiting for artisan response
+  ACCEPTED             // Artisan accepted, ready to schedule visit
+  VISIT_SCHEDULED      // Site visit date set
+  QUOTE_PENDING        // Artisan visited, preparing quote
+  QUOTE_SENT           // Artisan submitted price
+  QUOTE_APPROVED       // Client approved the price
+  QUOTE_DECLINED       // Client declined the quote
+  IN_PROGRESS          // Work is ongoing
+  WORK_COMPLETED       // Artisan marked work as done
+  COMPLETED            // Both parties confirmed, job complete
+  CANCELLED            // Booking cancelled
+  DISPUTED             // Dispute raised
 }
 
 model User {
@@ -110,19 +117,54 @@ model Booking {
   clientId        String        @map("client_id")
   artisanId       String        @map("artisan_id")
   status          BookingStatus @default(PENDING)
+
+  // Job Details
+  jobTitle        String        @map("job_title")
   jobDescription  String        @db.Text @map("job_description")
-  estimatedPrice  Float?        @map("estimated_price")
-  finalPrice      Float?        @map("final_price")
-  scheduledDate   DateTime?     @map("scheduled_date")
+  location        String?
+  urgency         String?       @default("normal") // normal, urgent, flexible
+
+  // Site Visit
+  visitDate       DateTime?     @map("visit_date")
+  visitNotes      String?       @db.Text @map("visit_notes")
+
+  // Quote/Pricing
+  quotedPrice     Decimal?      @db.Decimal(10, 2) @map("quoted_price")
+  laborCost       Decimal?      @db.Decimal(10, 2) @map("labor_cost")
+  materialCost    Decimal?      @db.Decimal(10, 2) @map("material_cost")
+  estimatedDays   Int?          @map("estimated_days")
+  quoteNotes      String?       @db.Text @map("quote_notes")
+  quoteSubmittedAt DateTime?    @map("quote_submitted_at")
+  quoteApprovedAt  DateTime?    @map("quote_approved_at")
+
+  // Work Progress
+  workStartDate   DateTime?     @map("work_start_date")
+  workEndDate     DateTime?     @map("work_end_date")
   completedDate   DateTime?     @map("completed_date")
+
+  // Commission & Payment
+  platformFee     Decimal?      @db.Decimal(10, 2) @map("platform_fee")
+  platformFeePercent Float?     @default(10) @map("platform_fee_percent")
+  artisanEarnings Decimal?      @db.Decimal(10, 2) @map("artisan_earnings")
+  commissionPaid  Boolean       @default(false) @map("commission_paid")
+  commissionDueDate DateTime?   @map("commission_due_date")
+  commissionPaidDate DateTime?  @map("commission_paid_date")
+  paymentProof    String?       @map("payment_proof")
+
+  // Additional Notes
   clientNotes     String?       @db.Text @map("client_notes")
   artisanNotes    String?       @db.Text @map("artisan_notes")
+  cancellationReason String?    @db.Text @map("cancellation_reason")
+
+  // Timestamps
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   client   User            @relation("ClientBookings", fields: [clientId], references: [id], onDelete: Cascade)
   artisan  ArtisanProfile  @relation("ArtisanBookings", fields: [artisanId], references: [id], onDelete: Cascade)
   review   Review?
+  quoteHistory QuoteHistory[]
+  statusHistory StatusHistory[]
 
   @@map("bookings")
 }
@@ -139,4 +181,33 @@ model Review {
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
+}
+
+model QuoteHistory {
+  id          String   @id @default(cuid())
+  bookingId   String   @map("booking_id")
+  quotedPrice Decimal  @db.Decimal(10, 2) @map("quoted_price")
+  laborCost   Decimal? @db.Decimal(10, 2) @map("labor_cost")
+  materialCost Decimal? @db.Decimal(10, 2) @map("material_cost")
+  notes       String?  @db.Text
+  submittedBy String   @map("submitted_by") // userId who submitted
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("quote_history")
+}
+
+model StatusHistory {
+  id         String        @id @default(cuid())
+  bookingId  String        @map("booking_id")
+  fromStatus BookingStatus @map("from_status")
+  toStatus   BookingStatus @map("to_status")
+  changedBy  String        @map("changed_by") // userId who made the change
+  reason     String?       @db.Text
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("status_history")
 }
