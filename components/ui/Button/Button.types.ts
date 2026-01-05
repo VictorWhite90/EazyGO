@@ -7,7 +7,7 @@ import { ButtonHTMLAttributes, ReactNode } from 'react';
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'glass';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'> {
+export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   /**
    * Visual variant of the button
    * @default 'primary'

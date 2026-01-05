@@ -28,10 +28,16 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       className,
       disabled,
       onClick,
+      onDrag,
+      onDragStart,
+      onDragEnd,
+      onAnimationStart,
+      onAnimationEnd,
       ...props
     },
     ref
   ) => {
+    // Explicitly exclude conflicting props - they're now destructured above and not spread to motion.button
     const buttonRef = useRef<HTMLButtonElement>(null);
     const [ripples, setRipples] = useState<{ x: number; y: number; id: number }[]>([]);
 

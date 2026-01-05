@@ -23,6 +23,11 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
       hoverScale = 1.02,
       className,
       style,
+      onDrag,
+      onDragStart,
+      onDragEnd,
+      onAnimationStart,
+      onAnimationEnd,
       ...props
     },
     ref
@@ -95,7 +100,7 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
           ...style,
         }}
         {...hoverProps}
-        {...props}
+        {...(props as any)}
       >
         {children}
       </Component>

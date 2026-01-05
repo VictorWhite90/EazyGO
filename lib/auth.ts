@@ -12,7 +12,7 @@ const loginSchema = z.object({
 })
 
 export const authConfig: NextAuthConfig = {
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma) as any,
   session: {
     strategy: "jwt",
   },
@@ -93,8 +93,8 @@ export const authConfig: NextAuthConfig = {
     },
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.role = user.role
-        token.id = user.id
+        token.role = user.role as any
+        token.id = user.id as string
       }
 
       if (trigger === "update" && session) {

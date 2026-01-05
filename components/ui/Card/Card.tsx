@@ -19,6 +19,11 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       hover = false,
       hoverScale = 1.02,
       className,
+      onDrag,
+      onDragStart,
+      onDragEnd,
+      onAnimationStart,
+      onAnimationEnd,
       ...props
     },
     ref

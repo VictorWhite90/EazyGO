@@ -7,7 +7,7 @@ import { HTMLAttributes, ReactNode } from 'react';
 export type CardVariant = 'default' | 'elevated' | 'bordered' | 'glass';
 export type CardPadding = 'none' | 'sm' | 'md' | 'lg';
 
-export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'> {
+export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   /**
    * Visual variant of the card
    * @default 'default'

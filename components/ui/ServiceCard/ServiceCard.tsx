@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
 
-export interface ServiceCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title' | 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'> {
+export interface ServiceCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   /**
    * Service image
    */
@@ -58,6 +58,11 @@ const ServiceCard = forwardRef<HTMLDivElement, ServiceCardProps>(
       rating,
       onClick,
       className,
+      onDrag,
+      onDragStart,
+      onDragEnd,
+      onAnimationStart,
+      onAnimationEnd,
       ...props
     },
     ref
