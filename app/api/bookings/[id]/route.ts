@@ -210,6 +210,40 @@ export async function PATCH(
           },
         },
       });
+    } else if (action === 'start_work') {
+      // Artisan starts work after quote approval
+      if (!isArtisan) {
+        return NextResponse.json(
+          { error: 'Only artisans can start work' },
+          { status: 403 }
+        );
+      }
+
+      updatedBooking = await prisma.booking.update({
+        where: { id },
+        data: {
+          status: 'IN_PROGRESS',
+          workStartDate: new Date(),
+          statusHistory: {
+            create: {
+              fromStatus: booking.status,
+              toStatus: 'IN_PROGRESS',
+              changedBy: session.user.id,
+              reason: 'Work started by artisan',
+            },
+          },
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            },
+          },
+        },
+      });
     } else if (action === 'complete_work') {
       // Artisan marks work as completed
       if (!isArtisan) {

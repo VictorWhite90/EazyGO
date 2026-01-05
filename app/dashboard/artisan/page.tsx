@@ -153,7 +153,7 @@ export default function ArtisanDashboard() {
     }
   };
 
-  const handleBookingAction = async (bookingId: string, action: 'accept' | 'reject') => {
+  const handleBookingAction = async (bookingId: string, action: string) => {
     try {
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: 'PATCH',
@@ -168,6 +168,11 @@ export default function ArtisanDashboard() {
       if (!response.ok) {
         alert(data.error || 'Failed to update booking');
         return;
+      }
+
+      // Show success message for certain actions
+      if (action === 'complete_work') {
+        alert('Work marked as completed! Waiting for client confirmation.');
       }
 
       // Refresh bookings list
@@ -640,10 +645,48 @@ export default function ArtisanDashboard() {
                               Submit Quote
                             </Button>
                           )}
-                          {booking.status === 'IN_PROGRESS' && (
-                            <Button variant="primary" size="sm">
-                              Mark Complete
+                          {booking.status === 'QUOTE_APPROVED' && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm('Ready to start work on this project?')) {
+                                  handleBookingAction(booking.id, 'start_work');
+                                }
+                              }}
+                            >
+                              Start Work
                             </Button>
+                          )}
+                          {booking.status === 'IN_PROGRESS' && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm('Have you completed all work for this project?')) {
+                                  handleBookingAction(booking.id, 'complete_work');
+                                }
+                              }}
+                            >
+                              Mark as Complete
+                            </Button>
+                          )}
+                          {booking.status === 'WORK_COMPLETED' && (
+                            <div className="bg-green-50 border-2 border-green-300 px-3 py-2 rounded-lg">
+                              <p className="text-xs font-semibold text-green-800">
+                                Awaiting client confirmation
+                              </p>
+                            </div>
+                          )}
+                          {booking.status === 'COMPLETED' && booking.quotedPrice && (
+                            <div className="bg-blue-50 border-2 border-blue-300 px-3 py-2 rounded-lg">
+                              <p className="text-xs font-semibold text-blue-800 mb-1">
+                                Commission Due
+                              </p>
+                              <p className="text-sm font-bold text-blue-900">
+                                ₦{(Number(booking.quotedPrice) * 0.1).toLocaleString()}
+                              </p>
+                            </div>
                           )}
                           <Link href={`/dashboard/artisan/bookings/${booking.id}`}>
                             <Button variant="ghost" size="sm">

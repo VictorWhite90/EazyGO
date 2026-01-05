@@ -26,6 +26,7 @@ import {
   Home,
   Sparkles,
   Zap,
+  AlertCircle,
 } from 'lucide-react';
 import { Container } from '@/components/layout/Container';
 import { Card } from '@/components/ui/Card';
@@ -199,6 +200,40 @@ export default function ClientDashboard() {
       console.error('Error fetching bookings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmCompletion = async (bookingId: string, quotedPrice: number) => {
+    const platformFee = quotedPrice * 0.1;
+    const confirmation = confirm(
+      `Confirm that the work has been completed satisfactorily?\n\n` +
+      `The artisan will be billed a 10% platform commission (₦${platformFee.toLocaleString()}) ` +
+      `and has 7 days to make payment.`
+    );
+
+    if (!confirmation) return;
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'confirm_completion' }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Failed to confirm completion');
+        return;
+      }
+
+      alert('Job completion confirmed! Thank you for using EazyGO.');
+      fetchBookings();
+    } catch (error) {
+      console.error('Error confirming completion:', error);
+      alert('An error occurred. Please try again.');
     }
   };
 
@@ -572,12 +607,23 @@ export default function ClientDashboard() {
                                   )}
                                 </div>
 
-                                <Link href={`/dashboard/client/bookings/${booking.id}`}>
-                                  <Button variant="ghost" size="sm">
-                                    View Details
-                                    <ArrowRight size={14} className="ml-1" />
-                                  </Button>
-                                </Link>
+                                <div className="flex items-center gap-2">
+                                  {booking.status === 'WORK_COMPLETED' && booking.quotedPrice && (
+                                    <Button
+                                      variant="primary"
+                                      size="sm"
+                                      onClick={() => handleConfirmCompletion(booking.id, Number(booking.quotedPrice))}
+                                    >
+                                      Confirm
+                                    </Button>
+                                  )}
+                                  <Link href={`/dashboard/client/bookings/${booking.id}`}>
+                                    <Button variant="ghost" size="sm">
+                                      View Details
+                                      <ArrowRight size={14} className="ml-1" />
+                                    </Button>
+                                  </Link>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -802,13 +848,22 @@ export default function ClientDashboard() {
                                   </div>
 
                                   <div className="flex items-center gap-3">
+                                    {booking.status === 'WORK_COMPLETED' && booking.quotedPrice && (
+                                      <Button
+                                        variant="primary"
+                                        size="sm"
+                                        onClick={() => handleConfirmCompletion(booking.id, Number(booking.quotedPrice))}
+                                      >
+                                        Confirm Completion
+                                      </Button>
+                                    )}
                                     {booking.status === 'COMPLETED' && !booking.review && (
                                       <Button variant="outline" size="sm">
                                         Leave Review
                                       </Button>
                                     )}
                                     <Link href={`/dashboard/client/bookings/${booking.id}`}>
-                                      <Button variant="primary" size="sm">
+                                      <Button variant="ghost" size="sm">
                                         View Details
                                       </Button>
                                     </Link>
