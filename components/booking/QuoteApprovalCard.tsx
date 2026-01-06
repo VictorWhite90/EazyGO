@@ -119,9 +119,9 @@ export function QuoteApprovalCard({
   return (
     <Card variant="default" padding="lg" className="border-2 border-primary-200 bg-gradient-to-br from-white to-primary-50/30">
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-2xl font-bold text-neutral-900">Quote Received</h3>
-          <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+          <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Quote Received</h3>
+          <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap w-fit">
             Awaiting Your Approval
           </div>
         </div>
