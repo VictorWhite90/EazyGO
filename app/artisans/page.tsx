@@ -461,15 +461,10 @@ export default function ArtisansPage() {
                             )}
                           </div>
 
-                          {/* Location & Rate */}
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-1 text-neutral-600">
-                              <MapPin size={14} />
-                              <span>{artisan.city}</span>
-                            </div>
-                            <div className="font-semibold text-primary-600">
-                              ₦{artisan.hourlyRate.toLocaleString()}/hr
-                            </div>
+                          {/* Location */}
+                          <div className="flex items-center gap-1 text-sm text-neutral-600">
+                            <MapPin size={14} />
+                            <span>{artisan.city}</span>
                           </div>
                         </div>
                       </Card>
@@ -539,9 +534,96 @@ export default function ArtisansPage() {
                 </button>
               </div>
 
-              {/* Same filter content as desktop */}
+              {/* Mobile filter content */}
               <div className="space-y-6">
-                {/* Copy filter content from desktop sidebar */}
+                {/* Verified Only */}
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={verifiedOnly}
+                      onChange={(e) => setVerifiedOnly(e.target.checked)}
+                      className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm font-medium text-neutral-700">
+                      Verified only
+                    </span>
+                  </label>
+                </div>
+
+                {/* City Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    City
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="e.g., Lagos"
+                    value={cityFilter}
+                    onChange={(e) => setCityFilter(e.target.value)}
+                  />
+                </div>
+
+                {/* Skills */}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-3">
+                    Skills
+                  </label>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {SKILLS.map((skill) => (
+                      <label
+                        key={skill}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-neutral-50 p-2 rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedSkills.includes(skill)}
+                          onChange={() => toggleSkill(skill)}
+                          className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-neutral-700">{skill}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Rate Range */}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Hourly Rate (₦)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Min"
+                      value={minRate}
+                      onChange={(e) => setMinRate(e.target.value)}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Max"
+                      value={maxRate}
+                      onChange={(e) => setMaxRate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Minimum Rating */}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Minimum Rating
+                  </label>
+                  <select
+                    value={minRating}
+                    onChange={(e) => setMinRating(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="">Any rating</option>
+                    <option value="4">4+ stars</option>
+                    <option value="4.5">4.5+ stars</option>
+                    <option value="4.8">4.8+ stars</option>
+                  </select>
+                </div>
               </div>
 
               <div className="mt-6 flex gap-3">

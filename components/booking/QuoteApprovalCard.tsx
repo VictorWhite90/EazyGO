@@ -117,15 +117,15 @@ export function QuoteApprovalCard({
   }
 
   return (
-    <Card variant="default" padding="lg" className="border-2 border-primary-200 bg-gradient-to-br from-white to-primary-50/30">
+    <Card variant="default" padding="lg" className="border-l-4 border-primary-600 bg-white hover:shadow-lg transition-all">
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-          <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Quote Received</h3>
-          <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap w-fit">
+          <h3 className="text-2xl font-bold text-neutral-900">Quote Received</h3>
+          <div className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap w-fit border border-indigo-200">
             Awaiting Your Approval
           </div>
         </div>
-        <p className="text-neutral-600">
+        <p className="text-neutral-600 text-base">
           {artisanName} has submitted a quote for <span className="font-semibold">{jobTitle}</span>
         </p>
       </div>
@@ -145,16 +145,14 @@ export function QuoteApprovalCard({
       {/* Quote Details */}
       <div className="space-y-4 mb-6">
         {/* Total Price */}
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <DollarSign className="text-green-600" size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-neutral-600 font-medium">Total Quoted Price</p>
-                <p className="text-3xl font-bold text-green-700">₦{quotedPrice.toLocaleString()}</p>
-              </div>
+        <div className="bg-gradient-to-r from-neutral-50 to-neutral-100/50 border-2 border-neutral-200 rounded-2xl p-6 hover:border-primary-300 transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <DollarSign className="text-primary-600" size={28} />
+            </div>
+            <div>
+              <p className="text-sm text-neutral-500 font-medium mb-1">Total Quoted Price</p>
+              <p className="text-4xl font-bold text-neutral-900">₦{quotedPrice.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -163,21 +161,25 @@ export function QuoteApprovalCard({
         {(laborCost || materialCost) && (
           <div className="grid sm:grid-cols-2 gap-4">
             {laborCost !== null && laborCost !== undefined && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Wrench size={16} className="text-blue-600" />
-                  <p className="text-sm font-medium text-blue-900">Labor Cost</p>
+              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-5 hover:border-neutral-300 transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Wrench size={16} className="text-blue-600" />
+                  </div>
+                  <p className="text-sm font-medium text-neutral-600">Labor Cost</p>
                 </div>
-                <p className="text-xl font-bold text-blue-700">₦{Number(laborCost).toLocaleString()}</p>
+                <p className="text-2xl font-bold text-neutral-900">₦{Number(laborCost).toLocaleString()}</p>
               </div>
             )}
             {materialCost !== null && materialCost !== undefined && (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Package size={16} className="text-purple-600" />
-                  <p className="text-sm font-medium text-purple-900">Material Cost</p>
+              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-5 hover:border-neutral-300 transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Package size={16} className="text-purple-600" />
+                  </div>
+                  <p className="text-sm font-medium text-neutral-600">Material Cost</p>
                 </div>
-                <p className="text-xl font-bold text-purple-700">₦{Number(materialCost).toLocaleString()}</p>
+                <p className="text-2xl font-bold text-neutral-900">₦{Number(materialCost).toLocaleString()}</p>
               </div>
             )}
           </div>
@@ -185,12 +187,14 @@ export function QuoteApprovalCard({
 
         {/* Estimated Duration */}
         {estimatedDays && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Calendar size={16} className="text-orange-600" />
-              <p className="text-sm font-medium text-orange-900">Estimated Duration</p>
+          <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-5 hover:border-neutral-300 transition-colors">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Calendar size={16} className="text-orange-600" />
+              </div>
+              <p className="text-sm font-medium text-neutral-600">Estimated Duration</p>
             </div>
-            <p className="text-xl font-bold text-orange-700">
+            <p className="text-2xl font-bold text-neutral-900">
               {estimatedDays} {estimatedDays === 1 ? 'day' : 'days'}
             </p>
           </div>

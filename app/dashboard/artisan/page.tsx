@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -23,6 +23,13 @@ import {
   Mail,
   Award,
   AlertCircle,
+  Activity,
+  Bell,
+  Sparkles,
+  TrendingDown,
+  Menu,
+  LogOut,
+  ArrowRight,
 } from 'lucide-react';
 import { Container } from '@/components/layout/Container';
 import { Card } from '@/components/ui/Card';
@@ -80,34 +87,70 @@ interface ArtisanProfile {
   };
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-  ACCEPTED: 'bg-blue-100 text-blue-700 border-blue-300',
-  VISIT_SCHEDULED: 'bg-cyan-100 text-cyan-700 border-cyan-300',
-  QUOTE_PENDING: 'bg-orange-100 text-orange-700 border-orange-300',
-  QUOTE_SENT: 'bg-indigo-100 text-indigo-700 border-indigo-300',
-  QUOTE_APPROVED: 'bg-teal-100 text-teal-700 border-teal-300',
-  QUOTE_DECLINED: 'bg-red-100 text-red-700 border-red-300',
-  IN_PROGRESS: 'bg-purple-100 text-purple-700 border-purple-300',
-  WORK_COMPLETED: 'bg-emerald-100 text-emerald-700 border-emerald-300',
-  COMPLETED: 'bg-green-100 text-green-700 border-green-300',
-  CANCELLED: 'bg-red-100 text-red-700 border-red-300',
-  DISPUTED: 'bg-gray-100 text-gray-700 border-gray-300',
-};
-
-const STATUS_ICONS: Record<string, any> = {
-  PENDING: Clock,
-  ACCEPTED: CheckCircle,
-  VISIT_SCHEDULED: Calendar,
-  QUOTE_PENDING: DollarSign,
-  QUOTE_SENT: DollarSign,
-  QUOTE_APPROVED: CheckCircle,
-  QUOTE_DECLINED: XCircle,
-  IN_PROGRESS: Clock,
-  WORK_COMPLETED: CheckCircle,
-  COMPLETED: CheckCircle,
-  CANCELLED: XCircle,
-  DISPUTED: AlertCircle,
+const STATUS_CONFIG: Record<string, any> = {
+  PENDING: {
+    label: 'Pending',
+    color: 'text-yellow-700',
+    bg: 'bg-yellow-100',
+    border: 'border-yellow-300',
+    icon: Clock,
+  },
+  ACCEPTED: {
+    label: 'Accepted',
+    color: 'text-blue-700',
+    bg: 'bg-blue-100',
+    border: 'border-blue-300',
+    icon: CheckCircle,
+  },
+  VISIT_SCHEDULED: {
+    label: 'Visit Scheduled',
+    color: 'text-cyan-700',
+    bg: 'bg-cyan-100',
+    border: 'border-cyan-300',
+    icon: Calendar,
+  },
+  QUOTE_PENDING: {
+    label: 'Quote Pending',
+    color: 'text-orange-700',
+    bg: 'bg-orange-100',
+    border: 'border-orange-300',
+    icon: DollarSign,
+  },
+  QUOTE_SENT: {
+    label: 'Quote Sent',
+    color: 'text-indigo-700',
+    bg: 'bg-indigo-100',
+    border: 'border-indigo-300',
+    icon: DollarSign,
+  },
+  QUOTE_APPROVED: {
+    label: 'Quote Approved',
+    color: 'text-teal-700',
+    bg: 'bg-teal-100',
+    border: 'border-teal-300',
+    icon: CheckCircle,
+  },
+  IN_PROGRESS: {
+    label: 'In Progress',
+    color: 'text-purple-700',
+    bg: 'bg-purple-100',
+    border: 'border-purple-300',
+    icon: Activity,
+  },
+  WORK_COMPLETED: {
+    label: 'Work Completed',
+    color: 'text-emerald-700',
+    bg: 'bg-emerald-100',
+    border: 'border-emerald-300',
+    icon: CheckCircle,
+  },
+  COMPLETED: {
+    label: 'Completed',
+    color: 'text-green-700',
+    bg: 'bg-green-100',
+    border: 'border-green-300',
+    icon: CheckCircle,
+  },
 };
 
 export default function ArtisanDashboard() {
@@ -120,6 +163,7 @@ export default function ArtisanDashboard() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [quoteBooking, setQuoteBooking] = useState<Booking | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -170,13 +214,12 @@ export default function ArtisanDashboard() {
         return;
       }
 
-      // Show success message for certain actions
       if (action === 'complete_work') {
         alert('Work marked as completed! Waiting for client confirmation.');
       }
 
-      // Refresh bookings list
       fetchBookings();
+      setQuoteBooking(null);
     } catch (error) {
       console.error('Error updating booking:', error);
       alert('An error occurred. Please try again.');
@@ -196,7 +239,7 @@ export default function ArtisanDashboard() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
         <Card variant="default" padding="lg" className="text-center max-w-md">
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">
             Artisan Profile Not Found
@@ -221,26 +264,33 @@ export default function ArtisanDashboard() {
     completed: bookings.filter((b) => b.status === 'COMPLETED').length,
   };
 
+  const pendingBookings = bookings.filter((b) => b.status === 'PENDING');
+  const activeBookings = bookings.filter((b) =>
+    ['ACCEPTED', 'VISIT_SCHEDULED', 'QUOTE_PENDING', 'QUOTE_SENT', 'QUOTE_APPROVED', 'IN_PROGRESS'].includes(b.status)
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-primary-50/20">
-      {/* Top Navigation Bar */}
-      <div className="bg-white border-b border-neutral-200 sticky top-0 z-50 shadow-sm">
+      {/* Modern Top Navigation */}
+      <div className="bg-white border-b border-neutral-200 sticky top-0 z-50 shadow-sm backdrop-blur-sm bg-white/95">
         <Container>
-          <div className="flex items-center justify-between py-4">
+          <div className="flex items-center justify-between py-3 sm:py-4">
             <Link href="/">
               <Image
                 src="/EAZYGO LOGO.png"
                 alt="EazyGO"
-                width={180}
-                height={72}
-                className="h-14 md:h-16 w-auto"
+                width={140}
+                height={56}
+                className="h-10 sm:h-12 w-auto"
               />
             </Link>
-            <div className="flex items-center gap-3">
+
+            {/* Desktop Menu */}
+            <div className="hidden md:flex items-center gap-2">
               <Link href="/">
-                <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors" title="Back to Home">
-                  <Home size={20} className="text-neutral-600" />
-                </button>
+                <Button variant="ghost" size="sm" icon={<Home size={16} />}>
+                  Home
+                </Button>
               </Link>
               <Link href={`/artisan/${profile.id}`}>
                 <Button variant="ghost" size="sm" icon={<User size={16} />}>
@@ -253,263 +303,173 @@ export default function ArtisanDashboard() {
                 </Button>
               </Link>
             </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+            >
+              <Menu size={24} className="text-neutral-700" />
+            </button>
           </div>
         </Container>
+
+        {/* Mobile Menu Dropdown */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden border-t border-neutral-200 bg-white overflow-hidden"
+            >
+              <Container>
+                <div className="py-3 space-y-1">
+                  <Link href="/" onClick={() => setMobileMenuOpen(false)}>
+                    <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 rounded-lg transition-colors text-left">
+                      <Home size={18} className="text-neutral-600" />
+                      <span className="font-medium text-neutral-900">Home</span>
+                    </button>
+                  </Link>
+                  <Link href={`/artisan/${profile.id}`} onClick={() => setMobileMenuOpen(false)}>
+                    <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 rounded-lg transition-colors text-left">
+                      <User size={18} className="text-neutral-600" />
+                      <span className="font-medium text-neutral-900">Public Profile</span>
+                    </button>
+                  </Link>
+                  <Link href="/dashboard/artisan/settings" onClick={() => setMobileMenuOpen(false)}>
+                    <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 rounded-lg transition-colors text-left">
+                      <Settings size={18} className="text-neutral-600" />
+                      <span className="font-medium text-neutral-900">Settings</span>
+                    </button>
+                  </Link>
+                </div>
+              </Container>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <Container className="py-8">
-        {/* Profile Hero Section */}
-        <div className="mb-8">
-          <Card variant="glass" padding="lg" className="overflow-hidden">
-            <div className="flex flex-col md:flex-row gap-6 items-start">
-              {/* Profile Picture */}
-              <div className="relative flex-shrink-0">
-                {profile.profilePhoto ? (
-                  <div className="relative w-32 h-32 rounded-2xl overflow-hidden ring-4 ring-primary-100 shadow-lg">
-                    <Image
-                      src={profile.profilePhoto}
-                      alt={profile.user.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center ring-4 ring-primary-100 shadow-lg">
-                    <User size={48} className="text-white" />
-                  </div>
-                )}
-                {profile.verified && (
-                  <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white p-2 rounded-full shadow-lg">
-                    <Award size={20} />
-                  </div>
-                )}
-              </div>
+      <Container className="py-6 sm:py-8 px-4">
+        {/* Modern Profile Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 sm:mb-8"
+        >
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 p-6 sm:p-8 shadow-2xl shadow-primary-500/30">
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24" />
 
-              {/* Profile Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4 mb-3">
-                  <div>
-                    <h1 className="text-3xl font-bold text-neutral-900 mb-1">
+            <div className="relative z-10">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 mb-6">
+                {/* Profile Picture */}
+                <div className="relative flex-shrink-0">
+                  {profile.profilePhoto ? (
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden ring-4 ring-white/30 shadow-xl">
+                      <Image
+                        src={profile.profilePhoto}
+                        alt={profile.user.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-4 ring-white/30 shadow-xl">
+                      <User size={40} className="text-white" />
+                    </div>
+                  )}
+                  {profile.verified && (
+                    <div className="absolute -bottom-2 -right-2 bg-white text-primary-600 p-2 rounded-full shadow-lg">
+                      <Award size={16} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Profile Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white truncate">
                       {profile.user.name}
                     </h1>
-                    <div className="flex items-center gap-4 text-sm text-neutral-600 mb-2">
-                      <div className="flex items-center gap-1">
-                        <Mail size={14} />
-                        {profile.user.email}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Phone size={14} />
-                        {profile.phone}
-                      </div>
-                      {profile.city && (
-                        <div className="flex items-center gap-1">
-                          <MapPin size={14} />
-                          {profile.city}{profile.state && `, ${profile.state}`}
-                        </div>
-                      )}
+                    {profile.verified && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold text-white w-fit">
+                        <Award size={14} />
+                        Verified
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-white/90 mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <Star size={16} className="text-yellow-300" fill="currentColor" />
+                      <span className="font-semibold">{profile.rating.toFixed(1)}</span>
                     </div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex items-center gap-1 bg-yellow-100 px-3 py-1 rounded-full">
-                        <Star size={16} className="text-yellow-600 fill-yellow-600" />
-                        <span className="font-semibold text-yellow-900">{profile.rating.toFixed(1)}</span>
-                      </div>
-                      <div className="text-sm text-neutral-600">
-                        {profile.totalJobs} {profile.totalJobs === 1 ? 'job' : 'jobs'} completed
-                      </div>
-                      {profile.yearsExp > 0 && (
-                        <div className="text-sm text-neutral-600">
-                          {profile.yearsExp} {profile.yearsExp === 1 ? 'year' : 'years'} experience
-                        </div>
-                      )}
+                    <span>•</span>
+                    <div className="flex items-center gap-1.5">
+                      <MapPin size={16} />
+                      <span>{profile.city}, {profile.state}</span>
+                    </div>
+                    <span className="hidden sm:inline">•</span>
+                    <div className="flex items-center gap-1.5">
+                      <Briefcase size={16} />
+                      <span>{profile.yearsExp} years experience</span>
                     </div>
                   </div>
-                </div>
-
-                {/* Bio */}
-                {profile.bio && (
-                  <p className="text-neutral-700 mb-4 leading-relaxed">
+                  <p className="text-white/80 text-sm line-clamp-2 max-w-2xl">
                     {profile.bio}
                   </p>
-                )}
+                </div>
+              </div>
 
-                {/* Skills */}
-                {profile.skills && profile.skills.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium text-neutral-600 mb-2">Skills & Expertise</p>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.skills.map((skill) => (
-                        <Badge key={skill} variant="primary" size="md">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              {/* Quick Stats Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-4">
+                  <p className="text-white/70 text-xs font-medium mb-1">Total Earnings</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">
+                    ₦{stats.totalEarnings.toLocaleString()}
+                  </p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-4">
+                  <p className="text-white/70 text-xs font-medium mb-1">Pending</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">
+                    {bookingStats.pending}
+                  </p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-4 col-span-2 sm:col-span-1">
+                  <p className="text-white/70 text-xs font-medium mb-1">Completed</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">
+                    {bookingStats.completed}
+                  </p>
+                </div>
               </div>
             </div>
-          </Card>
-        </div>
+          </div>
+        </motion.div>
 
-        {/* Verification Alert */}
-        {!profile.verified && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <Card variant="default" padding="md" className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="text-yellow-600" size={24} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-neutral-900 mb-1 text-lg">
-                    Get Verified & Stand Out
-                  </h3>
-                  <p className="text-sm text-neutral-700 mb-3">
-                    Verified artisans receive 3x more booking requests. Complete your verification to build trust with clients.
-                  </p>
-                  <Button variant="primary" size="sm">
-                    Start Verification Process
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        )}
-
-        {/* Stats Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Booking Requests Section */}
+        {pendingBookings.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
+            className="mb-6 sm:mb-8"
           >
-            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-neutral-600 mb-1">Total Earnings</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    ₦{stats.totalEarnings.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-neutral-500 mt-1">All time</p>
-                </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <DollarSign className="text-white" size={28} />
-                </div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-neutral-900">Booking Requests</h2>
+                <p className="text-sm text-neutral-600 mt-1">New requests awaiting your response</p>
               </div>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-neutral-600 mb-1">Pending Requests</p>
-                  <p className="text-3xl font-bold text-yellow-600">{bookingStats.pending}</p>
-                  <p className="text-xs text-neutral-500 mt-1">Awaiting response</p>
-                </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <AlertCircle className="text-white" size={28} />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-neutral-600 mb-1">In Progress</p>
-                  <p className="text-3xl font-bold text-purple-600">{bookingStats.inProgress}</p>
-                  <p className="text-xs text-neutral-500 mt-1">Active jobs</p>
-                </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Clock className="text-white" size={28} />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-neutral-600 mb-1">Completed</p>
-                  <p className="text-3xl font-bold text-primary-600">{profile.totalJobs}</p>
-                  <p className="text-xs text-neutral-500 mt-1">Lifetime jobs</p>
-                </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Briefcase className="text-white" size={28} />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Bookings Section */}
-        <Card variant="default" padding="lg">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-neutral-900">Booking Requests</h2>
-              <p className="text-sm text-neutral-600 mt-1">Manage your client bookings</p>
+              <Badge variant="primary" size="lg" className="bg-primary-600">
+                {pendingBookings.length}
+              </Badge>
             </div>
 
-            {/* Status Filter */}
-            <div className="flex gap-2 flex-wrap">
-              {[
-                { value: 'all', label: 'All' },
-                { value: 'pending', label: 'Pending' },
-                { value: 'accepted', label: 'Accepted' },
-                { value: 'in_progress', label: 'In Progress' },
-                { value: 'completed', label: 'Completed' },
-              ].map((filter) => (
-                <button
-                  key={filter.value}
-                  onClick={() => setStatusFilter(filter.value)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                    statusFilter === filter.value
-                      ? 'bg-primary-600 text-white shadow-md'
-                      : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-          </div>
+            <div className="space-y-3 sm:space-y-4">
+              {pendingBookings.map((booking, index) => {
+                const statusConfig = STATUS_CONFIG[booking.status];
+                const StatusIcon = statusConfig.icon;
 
-          {bookings.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Calendar size={48} className="text-neutral-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-neutral-900 mb-2">
-                No booking requests yet
-              </h3>
-              <p className="text-neutral-600 mb-6 max-w-md mx-auto">
-                Your bookings will appear here when clients request your services. Make sure your profile is complete to attract more clients.
-              </p>
-              <Link href={`/artisan/${profile.id}`}>
-                <Button variant="primary" size="md">View Your Public Profile</Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {bookings.map((booking, index) => {
-                const StatusIcon = STATUS_ICONS[booking.status];
                 return (
                   <motion.div
                     key={booking.id}
@@ -517,182 +477,58 @@ export default function ArtisanDashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <Card
-                      variant="default"
-                      padding="md"
-                      className="hover:shadow-md transition-all border-l-4"
-                      style={{
-                        borderLeftColor: booking.status === 'PENDING' ? '#eab308' :
-                                        booking.status === 'ACCEPTED' ? '#3b82f6' :
-                                        booking.status === 'IN_PROGRESS' ? '#a855f7' :
-                                        booking.status === 'COMPLETED' ? '#22c55e' : '#ef4444'
-                      }}
-                    >
-                      <div className="flex flex-col lg:flex-row gap-4">
-                        {/* Client Info */}
-                        <div className="flex items-start gap-4 flex-1">
-                          {/* Avatar */}
-                          <div className="relative w-14 h-14 flex-shrink-0">
-                            {booking.client.image ? (
-                              <Image
-                                src={booking.client.image}
-                                alt={booking.client.name}
-                                fill
-                                className="rounded-xl object-cover border-2 border-neutral-200"
-                              />
-                            ) : (
-                              <div className="w-full h-full rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-300 flex items-center justify-center">
-                                <User size={24} className="text-neutral-600" />
-                              </div>
-                            )}
+                    <Card variant="default" padding="lg" className="border-l-4 border-yellow-500 hover:shadow-lg transition-all overflow-hidden">
+                      <div className="flex flex-col gap-4">
+                        {/* Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                              <User size={24} className="text-yellow-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-base sm:text-lg font-semibold text-neutral-900 mb-1 truncate">
+                                {booking.jobTitle}
+                              </h3>
+                              <p className="text-sm text-neutral-600 mb-2">
+                                From: {booking.client.name}
+                              </p>
+                              <p className="text-sm text-neutral-700 line-clamp-2">
+                                {booking.jobDescription}
+                              </p>
+                            </div>
                           </div>
-
-                          {/* Details */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div>
-                                <h3 className="text-lg font-semibold text-neutral-900">
-                                  {booking.client.name}
-                                </h3>
-                                <p className="text-sm text-neutral-600">{booking.client.email}</p>
-                              </div>
-
-                              {/* Status Badge */}
-                              <div
-                                className={`px-3 py-1 rounded-full text-xs font-semibold border-2 flex items-center gap-1 ${STATUS_COLORS[booking.status]}`}
-                              >
-                                <StatusIcon size={14} />
-                                {booking.status.replace('_', ' ')}
-                              </div>
-                            </div>
-
-                            {/* Job Description */}
-                            <p className="text-neutral-800 font-medium mb-3">
-                              {booking.jobDescription}
-                            </p>
-
-                            {/* Client Notes */}
-                            {booking.clientNotes && (
-                              <div className="bg-neutral-50 border border-neutral-200 p-3 rounded-lg mb-3">
-                                <p className="text-xs font-semibold text-neutral-600 mb-1">
-                                  Client Notes:
-                                </p>
-                                <p className="text-sm text-neutral-700">{booking.clientNotes}</p>
-                              </div>
-                            )}
-
-                            {/* Meta Info */}
-                            <div className="flex flex-wrap gap-4 text-sm text-neutral-600">
-                              <div className="flex items-center gap-1">
-                                <Calendar size={14} />
-                                <span>
-                                  {new Date(booking.createdAt).toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                    year: 'numeric'
-                                  })}
-                                </span>
-                              </div>
-                              {booking.visitDate && (
-                                <div className="flex items-center gap-1 text-primary-600 font-medium">
-                                  <Clock size={14} />
-                                  <span>
-                                    Visit: {new Date(booking.visitDate).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric'
-                                    })}
-                                  </span>
-                                </div>
-                              )}
-                              {booking.quotedPrice && (
-                                <div className="flex items-center gap-1 font-semibold text-green-600">
-                                  <DollarSign size={14} />
-                                  ₦{Number(booking.quotedPrice).toLocaleString()}
-                                </div>
-                              )}
-                            </div>
+                          <div className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 w-fit ${statusConfig.bg} ${statusConfig.color} border ${statusConfig.border}`}>
+                            <StatusIcon size={14} />
+                            {statusConfig.label}
                           </div>
                         </div>
 
+                        {/* Details */}
+                        {booking.location && (
+                          <div className="flex items-center gap-2 text-sm text-neutral-600">
+                            <MapPin size={16} />
+                            <span className="truncate">{booking.location}</span>
+                          </div>
+                        )}
+
                         {/* Actions */}
-                        <div className="flex flex-row lg:flex-col gap-2 lg:items-end">
-                          {booking.status === 'PENDING' && (
-                            <>
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                className="flex-1 lg:flex-initial"
-                                onClick={() => handleBookingAction(booking.id, 'accept')}
-                              >
-                                Accept
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex-1 lg:flex-initial"
-                                onClick={() => handleBookingAction(booking.id, 'reject')}
-                              >
-                                Decline
-                              </Button>
-                            </>
-                          )}
-                          {(booking.status === 'ACCEPTED' || booking.status === 'VISIT_SCHEDULED') && (
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={() => setQuoteBooking(booking)}
-                            >
-                              Submit Quote
-                            </Button>
-                          )}
-                          {booking.status === 'QUOTE_APPROVED' && (
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={() => {
-                                if (confirm('Ready to start work on this project?')) {
-                                  handleBookingAction(booking.id, 'start_work');
-                                }
-                              }}
-                            >
-                              Start Work
-                            </Button>
-                          )}
-                          {booking.status === 'IN_PROGRESS' && (
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={() => {
-                                if (confirm('Have you completed all work for this project?')) {
-                                  handleBookingAction(booking.id, 'complete_work');
-                                }
-                              }}
-                            >
-                              Mark as Complete
-                            </Button>
-                          )}
-                          {booking.status === 'WORK_COMPLETED' && (
-                            <div className="bg-green-50 border-2 border-green-300 px-3 py-2 rounded-lg">
-                              <p className="text-xs font-semibold text-green-800">
-                                Awaiting client confirmation
-                              </p>
-                            </div>
-                          )}
-                          {booking.status === 'COMPLETED' && booking.quotedPrice && (
-                            <div className="bg-blue-50 border-2 border-blue-300 px-3 py-2 rounded-lg">
-                              <p className="text-xs font-semibold text-blue-800 mb-1">
-                                Commission Due
-                              </p>
-                              <p className="text-sm font-bold text-blue-900">
-                                ₦{(Number(booking.quotedPrice) * 0.1).toLocaleString()}
-                              </p>
-                            </div>
-                          )}
-                          <Link href={`/dashboard/artisan/bookings/${booking.id}`}>
-                            <Button variant="ghost" size="sm">
-                              View Details
-                            </Button>
-                          </Link>
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 border-t border-neutral-200">
+                          <Button
+                            variant="primary"
+                            size="md"
+                            onClick={() => handleBookingAction(booking.id, 'accept')}
+                            className="w-full sm:w-auto"
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="md"
+                            onClick={() => handleBookingAction(booking.id, 'decline')}
+                            className="w-full sm:w-auto"
+                          >
+                            Decline
+                          </Button>
                         </div>
                       </div>
                     </Card>
@@ -700,22 +536,102 @@ export default function ArtisanDashboard() {
                 );
               })}
             </div>
-          )}
-        </Card>
+          </motion.div>
+        )}
+
+        {/* Active Jobs Section */}
+        {activeBookings.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-6 sm:mb-8"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-neutral-900">Active Jobs</h2>
+                <p className="text-sm text-neutral-600 mt-1">Jobs in progress or awaiting action</p>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {activeBookings.map((booking, index) => {
+                const statusConfig = STATUS_CONFIG[booking.status];
+                const StatusIcon = statusConfig.icon;
+
+                return (
+                  <motion.div
+                    key={booking.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card variant="default" padding="md" className="h-full hover:shadow-lg transition-all overflow-hidden">
+                      <div className="flex flex-col h-full">
+                        <div className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 w-fit mb-3 ${statusConfig.bg} ${statusConfig.color} border ${statusConfig.border}`}>
+                          <StatusIcon size={12} />
+                          {statusConfig.label}
+                        </div>
+                        <h3 className="font-semibold text-neutral-900 mb-2 line-clamp-2">
+                          {booking.jobTitle}
+                        </h3>
+                        <p className="text-sm text-neutral-600 mb-3 line-clamp-2 flex-1">
+                          {booking.jobDescription}
+                        </p>
+                        <div className="flex items-center justify-between pt-3 border-t border-neutral-200">
+                          <span className="text-xs text-neutral-500">
+                            {booking.client.name}
+                          </span>
+                          <button className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1">
+                            View
+                            <ArrowRight size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Empty State */}
+        {bookings.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-12 sm:py-16"
+          >
+            <Card variant="default" padding="lg" className="max-w-md mx-auto">
+              <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Briefcase size={40} className="text-neutral-400" />
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-2">No bookings yet</h3>
+              <p className="text-neutral-600 mb-6">
+                You'll see booking requests from clients here once they start coming in.
+              </p>
+              <Link href={`/artisan/${profile.id}`}>
+                <Button variant="primary" size="md">
+                  View Public Profile
+                </Button>
+              </Link>
+            </Card>
+          </motion.div>
+        )}
       </Container>
 
       {/* Quote Submission Modal */}
-      {quoteBooking && (
-        <QuoteSubmissionForm
-          bookingId={quoteBooking.id}
-          jobTitle={quoteBooking.jobTitle}
-          onClose={() => setQuoteBooking(null)}
-          onSuccess={() => {
-            setQuoteBooking(null);
-            fetchBookings();
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {quoteBooking && (
+          <QuoteSubmissionForm
+            bookingId={quoteBooking.id}
+            jobTitle={quoteBooking.jobTitle}
+            onClose={() => setQuoteBooking(null)}
+            onSuccess={fetchBookings}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

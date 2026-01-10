@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   Calendar,
   Clock,
@@ -15,24 +14,24 @@ import {
   Star,
   MapPin,
   User,
-  Settings,
   ArrowRight,
   Bell,
-  Heart,
-  CreditCard,
   Activity,
   ChevronRight,
   Plus,
-  Home,
-  Sparkles,
-  Zap,
   AlertCircle,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Sparkles,
 } from 'lucide-react';
+import { ClientDashboardLayout } from '@/components/layout/ClientDashboardLayout';
 import { Container } from '@/components/layout/Container';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { QuoteApprovalCard } from '@/components/booking/QuoteApprovalCard';
+import Image from 'next/image';
 
 interface Booking {
   id: string;
@@ -248,11 +247,59 @@ export default function ClientDashboard() {
     );
   }
 
+  // Calculate daily stats
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const todayBookings = bookings.filter((b) => {
+    const created = new Date(b.createdAt);
+    created.setHours(0, 0, 0, 0);
+    return created.getTime() === today.getTime();
+  });
+
+  const yesterdayBookings = bookings.filter((b) => {
+    const created = new Date(b.createdAt);
+    created.setHours(0, 0, 0, 0);
+    return created.getTime() === yesterday.getTime();
+  });
+
+  const calculateTrend = (todayCount: number, yesterdayCount: number) => {
+    if (yesterdayCount === 0) return { percentage: todayCount > 0 ? 100 : 0, direction: todayCount > 0 ? 'up' : 'neutral' };
+    const change = ((todayCount - yesterdayCount) / yesterdayCount) * 100;
+    return {
+      percentage: Math.abs(Math.round(change)),
+      direction: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral'
+    };
+  };
+
   const stats = {
-    total: bookings.length,
-    pending: bookings.filter((b) => b.status === 'PENDING').length,
-    inProgress: bookings.filter((b) => b.status === 'IN_PROGRESS').length,
-    completed: bookings.filter((b) => b.status === 'COMPLETED').length,
+    total: {
+      today: todayBookings.length,
+      trend: calculateTrend(todayBookings.length, yesterdayBookings.length)
+    },
+    pending: {
+      today: todayBookings.filter((b) => b.status === 'PENDING').length,
+      trend: calculateTrend(
+        todayBookings.filter((b) => b.status === 'PENDING').length,
+        yesterdayBookings.filter((b) => b.status === 'PENDING').length
+      )
+    },
+    inProgress: {
+      today: todayBookings.filter((b) => b.status === 'IN_PROGRESS').length,
+      trend: calculateTrend(
+        todayBookings.filter((b) => b.status === 'IN_PROGRESS').length,
+        yesterdayBookings.filter((b) => b.status === 'IN_PROGRESS').length
+      )
+    },
+    completed: {
+      today: todayBookings.filter((b) => b.status === 'COMPLETED').length,
+      trend: calculateTrend(
+        todayBookings.filter((b) => b.status === 'COMPLETED').length,
+        yesterdayBookings.filter((b) => b.status === 'COMPLETED').length
+      )
+    }
   };
 
   const quotesToApprove = bookings.filter((b) => b.status === 'QUOTE_SENT');
@@ -267,132 +314,168 @@ export default function ClientDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-primary-50/20">
-      {/* Top Navigation Bar */}
-      <div className="bg-white border-b border-neutral-200 sticky top-0 z-50 shadow-sm">
-        <Container>
-          <div className="flex items-center justify-between py-4">
-            <Link href="/">
-              <Image
-                src="/EAZYGO LOGO.png"
-                alt="EazyGO"
-                width={180}
-                height={72}
-                className="h-14 md:h-16 w-auto"
-              />
-            </Link>
-            <div className="flex items-center gap-3">
-              <Link href="/">
-                <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors" title="Back to Home">
-                  <Home size={20} className="text-neutral-600" />
-                </button>
-              </Link>
-              <button className="relative p-2 hover:bg-neutral-100 rounded-lg transition-colors">
-                <Bell size={20} className="text-neutral-600" />
-                {stats.pending > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                )}
-              </button>
-              <Link href="/dashboard/client/settings">
-                <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
-                  <Settings size={20} className="text-neutral-600" />
-                </button>
-              </Link>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-semibold shadow-lg">
-                {session?.user?.name?.charAt(0) || 'U'}
-              </div>
-            </div>
-          </div>
-        </Container>
-      </div>
-
-      <Container className="py-8">
-        {/* Welcome Section */}
+    <ClientDashboardLayout>
+      <Container className="py-8 px-4 sm:px-6 lg:px-8">
+        {/* Welcome Section - Modern with date */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-bold text-neutral-900 mb-2">
-            Welcome back, {session?.user?.name?.split(' ')[0]}!
-          </h1>
-          <p className="text-neutral-600 text-lg">Here's an overview of your bookings and services</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-1">
+                Welcome back, {session?.user?.name?.split(' ')[0]}! 👋
+              </h1>
+              <p className="text-neutral-600 text-sm sm:text-base">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 bg-gradient-to-r from-primary-50 to-primary-100 px-4 py-2 rounded-full border border-primary-200">
+              <Sparkles size={18} className="text-primary-600" />
+              <span className="text-sm font-semibold text-primary-700">Today's Overview</span>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Stats Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Modern Stats Grid with Trends */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
+          {/* Total Bookings Today */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-neutral-600 mb-1">Total Bookings</p>
-                  <p className="text-3xl font-bold text-neutral-900">{stats.total}</p>
-                  <p className="text-xs text-neutral-500 mt-1">All time</p>
+            <Card variant="default" padding="lg" className="relative overflow-hidden border-l-4 border-blue-500 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/5 to-transparent rounded-full -mr-16 -mt-16" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/30">
+                    <Calendar className="text-white" size={20} />
+                  </div>
+                  {stats.total.trend.direction !== 'neutral' && (
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                      stats.total.trend.direction === 'up'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      {stats.total.trend.direction === 'up' ? (
+                        <TrendingUp size={12} />
+                      ) : (
+                        <TrendingDown size={12} />
+                      )}
+                      {stats.total.trend.percentage}%
+                    </div>
+                  )}
                 </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Calendar className="text-white" size={28} />
-                </div>
+                <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Today's Bookings</p>
+                <p className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-1">{stats.total.today}</p>
+                <p className="text-xs text-neutral-500">vs yesterday</p>
               </div>
             </Card>
           </motion.div>
 
+          {/* Pending Today */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-neutral-600 mb-1">Pending</p>
-                  <p className="text-3xl font-bold text-yellow-600">{stats.pending}</p>
-                  <p className="text-xs text-neutral-500 mt-1">Awaiting response</p>
+            <Card variant="default" padding="lg" className="relative overflow-hidden border-l-4 border-yellow-500 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-500/5 to-transparent rounded-full -mr-16 -mt-16" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2.5 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl shadow-lg shadow-yellow-500/30">
+                    <Clock className="text-white" size={20} />
+                  </div>
+                  {stats.pending.trend.direction !== 'neutral' && (
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                      stats.pending.trend.direction === 'up'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      {stats.pending.trend.direction === 'up' ? (
+                        <TrendingUp size={12} />
+                      ) : (
+                        <TrendingDown size={12} />
+                      )}
+                      {stats.pending.trend.percentage}%
+                    </div>
+                  )}
                 </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Clock className="text-white" size={28} />
-                </div>
+                <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Pending Today</p>
+                <p className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-1">{stats.pending.today}</p>
+                <p className="text-xs text-neutral-500">awaiting response</p>
               </div>
             </Card>
           </motion.div>
 
+          {/* In Progress Today */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-neutral-600 mb-1">In Progress</p>
-                  <p className="text-3xl font-bold text-purple-600">{stats.inProgress}</p>
-                  <p className="text-xs text-neutral-500 mt-1">Active jobs</p>
+            <Card variant="default" padding="lg" className="relative overflow-hidden border-l-4 border-purple-500 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/5 to-transparent rounded-full -mr-16 -mt-16" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2.5 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg shadow-purple-500/30">
+                    <Activity className="text-white" size={20} />
+                  </div>
+                  {stats.inProgress.trend.direction !== 'neutral' && (
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                      stats.inProgress.trend.direction === 'up'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      {stats.inProgress.trend.direction === 'up' ? (
+                        <TrendingUp size={12} />
+                      ) : (
+                        <TrendingDown size={12} />
+                      )}
+                      {stats.inProgress.trend.percentage}%
+                    </div>
+                  )}
                 </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Activity className="text-white" size={28} />
-                </div>
+                <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">In Progress Today</p>
+                <p className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-1">{stats.inProgress.today}</p>
+                <p className="text-xs text-neutral-500">active jobs</p>
               </div>
             </Card>
           </motion.div>
 
+          {/* Completed Today */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-neutral-600 mb-1">Completed</p>
-                  <p className="text-3xl font-bold text-green-600">{stats.completed}</p>
-                  <p className="text-xs text-neutral-500 mt-1">All time</p>
+            <Card variant="default" padding="lg" className="relative overflow-hidden border-l-4 border-green-500 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/5 to-transparent rounded-full -mr-16 -mt-16" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2.5 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg shadow-green-500/30">
+                    <CheckCircle className="text-white" size={20} />
+                  </div>
+                  {stats.completed.trend.direction !== 'neutral' && (
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                      stats.completed.trend.direction === 'up'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      {stats.completed.trend.direction === 'up' ? (
+                        <TrendingUp size={12} />
+                      ) : (
+                        <TrendingDown size={12} />
+                      )}
+                      {stats.completed.trend.percentage}%
+                    </div>
+                  )}
                 </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <CheckCircle className="text-white" size={28} />
-                </div>
+                <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Completed Today</p>
+                <p className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-1">{stats.completed.today}</p>
+                <p className="text-xs text-neutral-500">finished jobs</p>
               </div>
             </Card>
           </motion.div>
@@ -447,45 +530,48 @@ export default function ClientDashboard() {
         <div className="grid lg:grid-cols-3 gap-8 mb-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* CTA Card */}
+            {/* Modern CTA Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
             >
-              <Card variant="default" padding="lg" className="bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 border-0 text-white overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 p-6 sm:p-8 shadow-2xl shadow-primary-500/30">
+                {/* Decorative background elements */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24" />
-                <div className="relative z-10 flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles size={20} />
-                      <Badge variant="secondary" size="sm" className="bg-white/20 text-white border-white/30">
-                        Quick Action
-                      </Badge>
+
+                <div className="relative z-10">
+                  <div className="flex flex-col gap-6">
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+                          <Sparkles size={20} className="text-white" />
+                        </div>
+                        <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold text-white">
+                          Get Started
+                        </span>
+                      </div>
+                      <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                        Ready to hire an artisan?
+                      </h3>
+                      <p className="text-primary-50 text-sm sm:text-base max-w-xl">
+                        Connect with thousands of verified professionals in your area. Get quotes, compare, and book with confidence.
+                      </p>
                     </div>
-                    <h3 className="text-2xl font-bold mb-2">Need a Service?</h3>
-                    <p className="text-primary-100 mb-4 max-w-md">
-                      Browse our network of verified artisans and book professional services instantly
-                    </p>
+
                     <Link href="/artisans">
                       <Button
-                        variant="secondary"
-                        size="md"
-                        className="bg-white text-primary-600 hover:bg-primary-50"
-                        icon={<Search size={18} />}
+                        size="lg"
+                        className="bg-white text-primary-600 hover:bg-primary-50 border-none shadow-xl w-full sm:w-auto"
+                        icon={<Search size={20} />}
                       >
                         Browse Artisans
                       </Button>
                     </Link>
                   </div>
-                  <div className="hidden md:block">
-                    <div className="w-32 h-32 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                      <Zap size={56} className="text-white" />
-                    </div>
-                  </div>
                 </div>
-              </Card>
+              </div>
             </motion.div>
 
             {/* Recent Bookings */}
@@ -536,8 +622,8 @@ export default function ClientDashboard() {
                       >
                         <Card
                           variant="default"
-                          padding="md"
-                          className="hover:shadow-md transition-all border-l-4"
+                          padding="lg"
+                          className="hover:shadow-lg transition-all hover:-translate-y-1 border-l-4 overflow-hidden"
                           style={{
                             borderLeftColor: booking.status === 'PENDING' ? '#eab308' :
                                             booking.status === 'ACCEPTED' ? '#3b82f6' :
@@ -545,33 +631,33 @@ export default function ClientDashboard() {
                                             booking.status === 'COMPLETED' ? '#22c55e' : '#ef4444'
                           }}
                         >
-                          <div className="flex items-start gap-4">
+                          <div className="flex items-start gap-3 sm:gap-5">
                             <Link href={`/artisan/${booking.artisan.id}`}>
-                              <div className="relative w-14 h-14 flex-shrink-0 cursor-pointer group">
+                              <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 cursor-pointer group">
                                 {booking.artisan.profilePhoto ? (
                                   <Image
                                     src={booking.artisan.profilePhoto}
                                     alt={booking.artisan.user.name}
                                     fill
-                                    className="rounded-xl object-cover border-2 border-neutral-200 group-hover:border-primary-500 transition-colors"
+                                    className="rounded-2xl object-cover border-2 border-neutral-200 group-hover:border-primary-500 transition-colors"
                                   />
                                 ) : (
-                                  <div className="w-full h-full rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-300 flex items-center justify-center border-2 border-neutral-200 group-hover:border-primary-500 transition-colors">
-                                    <User size={24} className="text-neutral-600" />
+                                  <div className="w-full h-full rounded-2xl bg-gradient-to-br from-neutral-200 to-neutral-300 flex items-center justify-center border-2 border-neutral-200 group-hover:border-primary-500 transition-colors">
+                                    <User size={24} className="sm:w-8 sm:h-8 text-neutral-600" />
                                   </div>
                                 )}
                               </div>
                             </Link>
 
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <div>
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                                <div className="min-w-0 flex-1">
                                   <Link href={`/artisan/${booking.artisan.id}`}>
-                                    <h4 className="font-semibold text-neutral-900 hover:text-primary-600 transition-colors">
+                                    <h4 className="text-base sm:text-lg font-semibold text-neutral-900 hover:text-primary-600 transition-colors mb-1 truncate">
                                       {booking.artisan.user.name}
                                     </h4>
                                   </Link>
-                                  <div className="flex items-center gap-2 text-sm text-neutral-600 mt-1">
+                                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-neutral-600 flex-wrap">
                                     <div className="flex items-center gap-1">
                                       <Star size={14} className="text-yellow-500" fill="currentColor" />
                                       <span className="font-medium">{booking.artisan.rating.toFixed(1)}</span>
@@ -579,48 +665,47 @@ export default function ClientDashboard() {
                                     <span>•</span>
                                     <div className="flex items-center gap-1">
                                       <MapPin size={14} />
-                                      <span>{booking.artisan.city}</span>
+                                      <span className="truncate">{booking.artisan.city}</span>
                                     </div>
                                   </div>
                                 </div>
 
-                                <div className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 ${statusConfig.bg} ${statusConfig.color} border-2 ${statusConfig.border}`}>
-                                  <StatusIcon size={14} />
+                                <div className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0 ${statusConfig.bg} ${statusConfig.color} border ${statusConfig.border}`}>
+                                  <StatusIcon size={14} className="sm:w-4 sm:h-4" />
                                   {statusConfig.label}
                                 </div>
                               </div>
 
-                              <p className="text-sm text-neutral-700 mb-3 line-clamp-2">
+                              <p className="text-base text-neutral-700 mb-4 line-clamp-2 leading-relaxed">
                                 {booking.jobDescription}
                               </p>
 
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4 text-xs text-neutral-600">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar size={14} />
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div className="flex items-center gap-4 text-sm text-neutral-600 flex-wrap">
+                                  <div className="flex items-center gap-1.5">
+                                    <Calendar size={16} />
                                     <span>{new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                   </div>
                                   {booking.quotedPrice && (
-                                    <div className="font-semibold text-green-600 text-sm">
+                                    <div className="font-bold text-green-600 text-base">
                                       ₦{Number(booking.quotedPrice).toLocaleString()}
                                     </div>
                                   )}
                                 </div>
 
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   {booking.status === 'WORK_COMPLETED' && booking.quotedPrice && (
                                     <Button
                                       variant="primary"
-                                      size="sm"
+                                      size="md"
                                       onClick={() => handleConfirmCompletion(booking.id, Number(booking.quotedPrice))}
                                     >
-                                      Confirm
+                                      Confirm Completion
                                     </Button>
                                   )}
                                   <Link href={`/dashboard/client/bookings/${booking.id}`}>
-                                    <Button variant="ghost" size="sm">
+                                    <Button variant="ghost" size="md" icon={<ArrowRight size={16} />} iconPosition="right">
                                       View Details
-                                      <ArrowRight size={14} className="ml-1" />
                                     </Button>
                                   </Link>
                                 </div>
@@ -673,28 +758,6 @@ export default function ClientDashboard() {
               </Card>
             )}
 
-            {/* Quick Links */}
-            <Card variant="default" padding="lg">
-              <h3 className="text-lg font-bold text-neutral-900 mb-4">Quick Links</h3>
-              <div className="space-y-2">
-                {[
-                  { icon: Heart, label: 'Saved Artisans', href: '/dashboard/client/saved', color: 'text-red-500', bgColor: 'bg-red-50' },
-                  { icon: CreditCard, label: 'Payment Methods', href: '/dashboard/client/payments', color: 'text-blue-500', bgColor: 'bg-blue-50' },
-                  { icon: User, label: 'My Profile', href: '/dashboard/client/profile', color: 'text-purple-500', bgColor: 'bg-purple-50' },
-                  { icon: Settings, label: 'Settings', href: '/dashboard/client/settings', color: 'text-neutral-600', bgColor: 'bg-neutral-50' },
-                ].map((link) => (
-                  <Link key={link.label} href={link.href}>
-                    <button className="w-full flex items-center gap-3 p-3 hover:bg-neutral-50 rounded-xl transition-all group">
-                      <div className={`w-10 h-10 ${link.bgColor} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                        <link.icon size={18} className={link.color} />
-                      </div>
-                      <span className="text-sm font-medium text-neutral-700 flex-1 text-left">{link.label}</span>
-                      <ChevronRight size={16} className="text-neutral-400 group-hover:text-primary-600 transition-colors" />
-                    </button>
-                  </Link>
-                ))}
-              </div>
-            </Card>
           </div>
         </div>
 
@@ -762,8 +825,8 @@ export default function ClientDashboard() {
                       >
                         <Card
                           variant="default"
-                          padding="md"
-                          className="hover:shadow-md transition-all border-l-4"
+                          padding="lg"
+                          className="hover:shadow-lg transition-all hover:-translate-y-1 border-l-4 overflow-hidden"
                           style={{
                             borderLeftColor: booking.status === 'PENDING' ? '#eab308' :
                                             booking.status === 'ACCEPTED' ? '#3b82f6' :
@@ -771,103 +834,101 @@ export default function ClientDashboard() {
                                             booking.status === 'COMPLETED' ? '#22c55e' : '#ef4444'
                           }}
                         >
-                          <div className="flex flex-col lg:flex-row gap-4">
-                            <div className="flex items-start gap-4 flex-1">
-                              <Link href={`/artisan/${booking.artisan.id}`}>
-                                <div className="relative w-16 h-16 flex-shrink-0 cursor-pointer group">
-                                  {booking.artisan.profilePhoto ? (
-                                    <Image
-                                      src={booking.artisan.profilePhoto}
-                                      alt={booking.artisan.user.name}
-                                      fill
-                                      className="rounded-xl object-cover border-2 border-neutral-200 group-hover:border-primary-500 transition-colors"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-300 flex items-center justify-center border-2 border-neutral-200 group-hover:border-primary-500 transition-colors">
-                                      <User size={28} className="text-neutral-600" />
+                          <div className="flex items-start gap-3 sm:gap-5">
+                            <Link href={`/artisan/${booking.artisan.id}`}>
+                              <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 cursor-pointer group">
+                                {booking.artisan.profilePhoto ? (
+                                  <Image
+                                    src={booking.artisan.profilePhoto}
+                                    alt={booking.artisan.user.name}
+                                    fill
+                                    className="rounded-2xl object-cover border-2 border-neutral-200 group-hover:border-primary-500 transition-colors"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full rounded-2xl bg-gradient-to-br from-neutral-200 to-neutral-300 flex items-center justify-center border-2 border-neutral-200 group-hover:border-primary-500 transition-colors">
+                                    <User size={24} className="sm:w-8 sm:h-8 text-neutral-600" />
+                                  </div>
+                                )}
+                              </div>
+                            </Link>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                                <div className="min-w-0 flex-1">
+                                  <Link href={`/artisan/${booking.artisan.id}`}>
+                                    <h4 className="text-base sm:text-lg font-semibold text-neutral-900 hover:text-primary-600 transition-colors mb-1 truncate">
+                                      {booking.artisan.user.name}
+                                    </h4>
+                                  </Link>
+                                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-neutral-600 flex-wrap">
+                                    <div className="flex items-center gap-1">
+                                      <Star size={14} className="text-yellow-500" fill="currentColor" />
+                                      <span className="font-medium">{booking.artisan.rating.toFixed(1)}</span>
+                                    </div>
+                                    <span>•</span>
+                                    <div className="flex items-center gap-1">
+                                      <MapPin size={14} />
+                                      <span className="truncate">{booking.artisan.city}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0 ${statusConfig.bg} ${statusConfig.color} border ${statusConfig.border}`}>
+                                  <StatusIcon size={14} className="sm:w-4 sm:h-4" />
+                                  {statusConfig.label}
+                                </div>
+                              </div>
+
+                              <p className="text-base text-neutral-700 mb-4 line-clamp-2 leading-relaxed">
+                                {booking.jobDescription}
+                              </p>
+
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div className="flex items-center gap-4 text-sm text-neutral-600 flex-wrap">
+                                  <div className="flex items-center gap-1.5">
+                                    <Calendar size={16} />
+                                    <span>{new Date(booking.createdAt).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })}</span>
+                                  </div>
+                                  {booking.visitDate && (
+                                    <div className="flex items-center gap-1.5 text-primary-600 font-medium">
+                                      <Clock size={16} />
+                                      <span>{new Date(booking.visitDate).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric'
+                                      })}</span>
+                                    </div>
+                                  )}
+                                  {booking.quotedPrice && (
+                                    <div className="font-bold text-green-600 text-base">
+                                      ₦{Number(booking.quotedPrice).toLocaleString()}
                                     </div>
                                   )}
                                 </div>
-                              </Link>
 
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-4 mb-3">
-                                  <div>
-                                    <Link href={`/artisan/${booking.artisan.id}`}>
-                                      <h4 className="text-lg font-semibold text-neutral-900 hover:text-primary-600 transition-colors">
-                                        {booking.artisan.user.name}
-                                      </h4>
-                                    </Link>
-                                    <div className="flex items-center gap-3 text-sm text-neutral-600 mt-1">
-                                      <div className="flex items-center gap-1">
-                                        <Star size={14} className="text-yellow-500" fill="currentColor" />
-                                        <span className="font-medium">{booking.artisan.rating.toFixed(1)}</span>
-                                      </div>
-                                      <span>•</span>
-                                      <div className="flex items-center gap-1">
-                                        <MapPin size={14} />
-                                        <span>{booking.artisan.city}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 ${statusConfig.bg} ${statusConfig.color} border-2 ${statusConfig.border}`}>
-                                    <StatusIcon size={16} />
-                                    {statusConfig.label}
-                                  </div>
-                                </div>
-
-                                <p className="text-neutral-800 font-medium mb-4 line-clamp-2">
-                                  {booking.jobDescription}
-                                </p>
-
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-6 text-sm text-neutral-600">
-                                    <div className="flex items-center gap-2">
-                                      <Calendar size={16} />
-                                      <span>{new Date(booking.createdAt).toLocaleDateString('en-US', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric'
-                                      })}</span>
-                                    </div>
-                                    {booking.visitDate && (
-                                      <div className="flex items-center gap-2 text-primary-600 font-medium">
-                                        <Clock size={16} />
-                                        <span>{new Date(booking.visitDate).toLocaleDateString('en-US', {
-                                          month: 'short',
-                                          day: 'numeric'
-                                        })}</span>
-                                      </div>
-                                    )}
-                                    {booking.quotedPrice && (
-                                      <div className="font-semibold text-green-600 text-base flex items-center gap-1">
-                                        ₦{Number(booking.quotedPrice).toLocaleString()}
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <div className="flex items-center gap-3">
-                                    {booking.status === 'WORK_COMPLETED' && booking.quotedPrice && (
-                                      <Button
-                                        variant="primary"
-                                        size="sm"
-                                        onClick={() => handleConfirmCompletion(booking.id, Number(booking.quotedPrice))}
-                                      >
-                                        Confirm Completion
-                                      </Button>
-                                    )}
-                                    {booking.status === 'COMPLETED' && !booking.review && (
-                                      <Button variant="outline" size="sm">
-                                        Leave Review
-                                      </Button>
-                                    )}
-                                    <Link href={`/dashboard/client/bookings/${booking.id}`}>
-                                      <Button variant="ghost" size="sm">
-                                        View Details
-                                      </Button>
-                                    </Link>
-                                  </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {booking.status === 'WORK_COMPLETED' && booking.quotedPrice && (
+                                    <Button
+                                      variant="primary"
+                                      size="md"
+                                      onClick={() => handleConfirmCompletion(booking.id, Number(booking.quotedPrice))}
+                                    >
+                                      Confirm Completion
+                                    </Button>
+                                  )}
+                                  {booking.status === 'COMPLETED' && !booking.review && (
+                                    <Button variant="outline" size="md">
+                                      Leave Review
+                                    </Button>
+                                  )}
+                                  <Link href={`/dashboard/client/bookings/${booking.id}`}>
+                                    <Button variant="ghost" size="md" icon={<ArrowRight size={16} />} iconPosition="right">
+                                      View Details
+                                    </Button>
+                                  </Link>
                                 </div>
                               </div>
                             </div>
@@ -882,6 +943,6 @@ export default function ClientDashboard() {
           </div>
         )}
       </Container>
-    </div>
+    </ClientDashboardLayout>
   );
 }

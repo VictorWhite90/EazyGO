@@ -5,20 +5,38 @@
  * Professional, trust-building hero with glassmorphism and micro-interactions
  */
 
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Briefcase, Shield, Clock, Star } from 'lucide-react';
 import Link from 'next/link';
+import { useRef } from 'react';
 import { Container } from '@/components/layout/Container';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { GlassCard } from '@/components/ui/Card';
-import { FadeIn, SlideIn } from '@/components/animations';
+import { FadeIn, SlideIn, Typewriter } from '@/components/animations';
 
 export default function Hero() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start start', 'end start'],
+  });
+
+  // Parallax effects for decorative blobs
+  const blob1Y = useTransform(scrollYProgress, [0, 1], [0, 150]);
+  const blob2Y = useTransform(scrollYProgress, [0, 1], [0, -150]);
+  const blob1Scale = useTransform(scrollYProgress, [0, 1], [1, 1.2]);
+  const blob2Scale = useTransform(scrollYProgress, [0, 1], [1, 0.8]);
+
   return (
-    <section className="relative min-h-screen flex items-center bg-gradient-to-br from-neutral-50 via-white to-primary-50/30 overflow-hidden pb-12">
+    <section ref={sectionRef} className="relative min-h-screen flex items-center bg-gradient-to-br from-neutral-50 via-white to-primary-50/30 overflow-hidden pb-12">
       {/* Animated grid pattern background */}
-      <div className="absolute inset-0 opacity-[0.02]">
+      <motion.div
+        className="absolute inset-0 opacity-[0.02]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.02 }}
+        transition={{ duration: 1.5 }}
+      >
         <div className="absolute inset-0" style={{
           backgroundImage: `
             linear-gradient(to right, #000 1px, transparent 1px),
@@ -26,7 +44,7 @@ export default function Hero() {
           `,
           backgroundSize: '4rem 4rem',
         }} />
-      </div>
+      </motion.div>
 
       <Container className="relative z-10 py-20">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -38,12 +56,23 @@ export default function Hero() {
               </Badge>
             </FadeIn>
 
-            <FadeIn delay={0.2}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+            >
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-neutral-900 mb-6 leading-tight">
-                Connect with skilled artisans,
-                <span className="text-primary-600"> instantly</span>
+                <span className="block mb-2">Connect with skilled </span>
+                <span className="text-primary-600">
+                  <Typewriter
+                    text="labourers, instantly"
+                    speed={80}
+                    delay={300}
+                    showCursor={1}
+                  />
+                </span>
               </h1>
-            </FadeIn>
+            </motion.div>
 
             <FadeIn delay={0.3}>
               <p className="text-xl sm:text-2xl text-neutral-600 mb-8 leading-relaxed">
@@ -52,30 +81,65 @@ export default function Hero() {
             </FadeIn>
 
             {/* CTA Buttons */}
-            <FadeIn delay={0.4}>
-              <div className="flex flex-col sm:flex-row gap-4 mb-12">
-                <Link href="/auth/register/client">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.6 }}
+              className="flex flex-col sm:flex-row gap-4 mb-12"
+            >
+              <Link href="/auth/register/client" className="flex-1">
+                <motion.div
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  animate={{
+                    y: [0, -5, 0],
+                  }}
+                  transition={{
+                    y: {
+                      duration: 2.5,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    },
+                  }}
+                  className="w-full"
+                >
                   <Button
                     variant="primary"
                     size="lg"
                     icon={<ArrowRight size={20} />}
                     iconPosition="right"
+                    className="shadow-lg hover:shadow-xl transition-shadow w-full"
                   >
-                    Find an artisan
+                    Find a labourer
                   </Button>
-                </Link>
+                </motion.div>
+              </Link>
 
-                <Link href="/auth/register/artisan">
-                  <Button
-                    variant="glass"
-                    size="lg"
-                    icon={<Briefcase size={20} />}
-                  >
-                    Become an artisan
-                  </Button>
-                </Link>
-              </div>
-            </FadeIn>
+              <Link href="/auth/register/artisan" className="flex-1">
+                <motion.div
+                  className="relative overflow-hidden rounded-full border-2 border-neutral-900 w-full"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.8, duration: 0.4 }}
+                >
+                  {/* Animated black background sliding from left */}
+                  <motion.div
+                    className="absolute inset-0 bg-neutral-900 z-0"
+                    initial={{ width: 0 }}
+                    whileInView={{ width: '100%' }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.9, duration: 0.8, ease: 'easeInOut' }}
+                  />
+                  <button className="relative z-10 px-8 py-4 bg-transparent text-white text-base font-semibold flex items-center justify-center gap-2 w-full">
+                    <Briefcase size={20} />
+                    <span>Become a labourer</span>
+                  </button>
+                </motion.div>
+              </Link>
+            </motion.div>
 
             {/* Trust indicators */}
             <FadeIn delay={0.5}>
@@ -133,17 +197,27 @@ export default function Hero() {
 
                   {/* Quick service options */}
                   <div className="grid grid-cols-2 gap-3">
-                    {['Plumbing', 'Electrical', 'Carpentry', 'Painting'].map((service, i) => (
+                    {[
+                      { name: 'Plumbing', direction: { x: -50, y: -30 } },
+                      { name: 'Electrical', direction: { x: 50, y: -30 } },
+                      { name: 'Carpentry', direction: { x: -50, y: 30 } },
+                      { name: 'Painting', direction: { x: 50, y: 30 } },
+                    ].map((service, i) => (
                       <motion.button
-                        key={service}
-                        className="px-4 py-3 bg-white/60 hover:bg-white/80 border border-neutral-200 rounded-lg text-sm font-medium text-neutral-700 transition-all"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.6 + i * 0.1 }}
+                        key={service.name}
+                        className="px-4 py-3 bg-white/60 hover:bg-white/80 border border-neutral-200 rounded-lg text-sm font-medium text-neutral-700 transition-all shadow-sm hover:shadow-md"
+                        whileHover={{ scale: 1.05, y: -3 }}
+                        whileTap={{ scale: 0.95 }}
+                        initial={{ opacity: 0, ...service.direction }}
+                        animate={{ opacity: 1, x: 0, y: 0 }}
+                        transition={{
+                          delay: 0.6 + i * 0.15,
+                          type: 'spring',
+                          stiffness: 150,
+                          damping: 12,
+                        }}
                       >
-                        {service}
+                        {service.name}
                       </motion.button>
                     ))}
                   </div>
@@ -199,9 +273,10 @@ export default function Hero() {
         </div>
       </Container>
 
-      {/* Decorative elements */}
+      {/* Decorative elements with parallax */}
       <motion.div
         className="absolute top-20 right-10 w-72 h-72 bg-primary-200/20 rounded-full blur-3xl"
+        style={{ y: blob1Y, scale: blob1Scale }}
         animate={{
           scale: [1, 1.2, 1],
           opacity: [0.3, 0.5, 0.3],
@@ -215,6 +290,7 @@ export default function Hero() {
 
       <motion.div
         className="absolute bottom-20 left-10 w-96 h-96 bg-secondary-200/20 rounded-full blur-3xl"
+        style={{ y: blob2Y, scale: blob2Scale }}
         animate={{
           scale: [1, 1.3, 1],
           opacity: [0.2, 0.4, 0.2],

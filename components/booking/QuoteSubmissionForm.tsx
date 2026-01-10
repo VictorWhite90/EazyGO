@@ -275,7 +275,7 @@ export function QuoteSubmissionForm({
               <Button
                 type="button"
                 variant="outline"
-                size="lg"
+                size="md"
                 fullWidth
                 onClick={onClose}
                 disabled={isLoading}
@@ -285,7 +285,7 @@ export function QuoteSubmissionForm({
               <Button
                 type="submit"
                 variant="primary"
-                size="lg"
+                size="md"
                 fullWidth
                 disabled={isLoading}
                 icon={isLoading ? <Loader2 size={20} className="animate-spin" /> : undefined}

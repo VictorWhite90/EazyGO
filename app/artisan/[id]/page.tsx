@@ -340,14 +340,6 @@ export default function ArtisanProfilePage() {
           <div className="space-y-6">
             {/* Booking Card */}
             <Card variant="default" padding="lg" className="sticky top-8">
-              <div className="text-center mb-6">
-                <p className="text-3xl font-bold text-primary-600 mb-1">
-                  ₦{artisan.hourlyRate.toLocaleString()}
-                  <span className="text-lg text-neutral-600 font-normal">/hr</span>
-                </p>
-                <p className="text-sm text-neutral-600">Starting rate</p>
-              </div>
-
               <Button
                 variant="primary"
                 size="lg"

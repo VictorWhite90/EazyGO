@@ -6,6 +6,7 @@
  */
 
 import { Shield, Clock, Award, CreditCard, Users, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Container } from '@/components/layout/Container';
 import { SectionHeader } from '@/components/layout/SectionHeader';
 import { Card } from '@/components/ui/Card';
@@ -63,34 +64,85 @@ export default function FeaturesGrid() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
             <FadeIn key={feature.title} delay={index * 0.1}>
-              <Card
-                variant="default"
-                padding="lg"
-                hover
-                hoverScale={1.03}
-                className="h-full group"
+              <motion.div
+                className="h-full"
+                whileHover={{ y: -8 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
               >
-                {/* Icon */}
-                <div className={`w-14 h-14 rounded-2xl ${feature.color} flex items-center justify-center mb-6 transition-transform group-hover:scale-110`}>
-                  <feature.icon size={28} />
-                </div>
+                <Card
+                  variant="default"
+                  padding="lg"
+                  hover
+                  hoverScale={1.02}
+                  className="h-full group relative overflow-hidden"
+                >
+                  {/* Animated background gradient on hover */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-br from-primary-50/50 to-transparent opacity-0"
+                    whileHover={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  />
 
-                {/* Content */}
-                <h3 className="text-xl font-semibold text-neutral-900 mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-neutral-600 leading-relaxed mb-4">
-                  {feature.description}
-                </p>
+                  <div className="relative z-10">
+                    {/* Icon with advanced animations */}
+                    <motion.div
+                      className={`w-14 h-14 rounded-2xl ${feature.color} flex items-center justify-center mb-6`}
+                      whileHover={{
+                        scale: 1.15,
+                        rotate: [0, -10, 10, -10, 0],
+                      }}
+                      transition={{
+                        scale: { duration: 0.3 },
+                        rotate: { duration: 0.5 },
+                      }}
+                    >
+                      <feature.icon size={28} />
+                    </motion.div>
 
-                {/* Hover arrow */}
-                <div className="flex items-center gap-2 text-primary-600 font-medium text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span>Learn more</span>
-                  <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Card>
+                    {/* Content */}
+                    <motion.h3
+                      className="text-lg md:text-xl font-semibold text-neutral-900 mb-3"
+                      initial={{ opacity: 1 }}
+                      whileHover={{ opacity: 1, x: 3 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {feature.title}
+                    </motion.h3>
+                    <p className="text-sm md:text-base text-neutral-600 leading-relaxed mb-4">
+                      {feature.description}
+                    </p>
+
+                    {/* Learn more link - fades in after card on scroll */}
+                    <motion.div
+                      className="flex items-center gap-2 text-primary-600 font-medium text-sm"
+                      initial={{ opacity: 0, x: -10 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.1 + 0.3, duration: 0.4 }}
+                    >
+                      <span>Learn more</span>
+                      <motion.svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        animate={{ x: [0, 5, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </motion.svg>
+                    </motion.div>
+                  </div>
+
+                  {/* Corner accent that grows on hover */}
+                  <motion.div
+                    className="absolute top-0 right-0 w-20 h-20 bg-primary-500/10 rounded-bl-full"
+                    initial={{ scale: 0, opacity: 0 }}
+                    whileHover={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </Card>
+              </motion.div>
             </FadeIn>
           ))}
         </div>
